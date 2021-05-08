@@ -1,2 +1,4 @@
 .torrent.bolt.db
+*/.web-bt-client.*
+.web-bt-client.*
 .idea

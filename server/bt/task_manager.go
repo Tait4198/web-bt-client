@@ -1,8 +1,11 @@
 package bt
 
 import (
+	"context"
+	"crawshaw.io/sqlite/sqlitex"
 	"fmt"
 	"github.com/anacrolix/torrent"
+	"github.com/web-bt-client/db"
 	"log"
 	"sync"
 )
@@ -12,8 +15,25 @@ type TaskManager struct {
 	taskMap sync.Map
 }
 
+func (tm *TaskManager) taskExists(infoHash string) bool {
+	if _, ok := tm.taskMap.Load(infoHash); ok {
+		return true
+	}
+	conn := db.GetPool().Get(context.TODO())
+	defer db.GetPool().Put(conn)
+
+	stmt := conn.Prep("select count(*) from task_list where info_hash = $hash")
+	stmt.SetText("$hash", infoHash)
+	if v, err := sqlitex.ResultInt(stmt); err == nil {
+		return v == 0
+	} else {
+		log.Printf("Query Count Error %s", err)
+	}
+	return true
+}
+
 func (tm *TaskManager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) {
-	if _, ok := tm.taskMap.Load(t.InfoHash().String()); ok {
+	if tm.taskExists(t.InfoHash().String()) {
 		return nil, fmt.Errorf("任务已存在 %s", t.InfoHash().String())
 	} else {
 		task := NewTorrentTask(t)
@@ -29,7 +49,8 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 	}
 	task, err := tm.newTorrentTask(t)
 	if err == nil {
-		task.Download()
+		//task.Download()
+		task.GetInfo()
 		return t.InfoHash().String(), nil
 	}
 	return "", err
