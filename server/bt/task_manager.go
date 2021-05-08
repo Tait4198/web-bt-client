@@ -29,7 +29,7 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 	}
 	task, err := tm.newTorrentTask(t)
 	if err == nil {
-		task.GetInfo()
+		task.Download()
 		return t.InfoHash().String(), nil
 	}
 	return "", err
@@ -37,7 +37,7 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 
 func (tm *TaskManager) StopTask(hash string) {
 	if task, ok := tm.taskMap.Load(hash); ok {
-		(task.(*TorrentTask)).StopGetInfo()
+		(task.(*TorrentTask)).Stop()
 	}
 }
 
