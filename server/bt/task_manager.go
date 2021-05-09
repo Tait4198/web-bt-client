@@ -22,10 +22,10 @@ func (tm *TaskManager) taskExists(infoHash string) bool {
 	conn := db.GetPool().Get(context.TODO())
 	defer db.GetPool().Put(conn)
 
-	stmt := conn.Prep("select count(*) from task_list where info_hash = $hash")
+	stmt := conn.Prep("select count(*) from tasks where info_hash = $hash")
 	stmt.SetText("$hash", infoHash)
 	if v, err := sqlitex.ResultInt(stmt); err == nil {
-		return v == 0
+		return v > 0
 	} else {
 		log.Printf("Query Count Error %s", err)
 	}
@@ -36,7 +36,7 @@ func (tm *TaskManager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) 
 	if tm.taskExists(t.InfoHash().String()) {
 		return nil, fmt.Errorf("任务已存在 %s", t.InfoHash().String())
 	} else {
-		task := NewTorrentTask(t)
+		task := NewTorrentTask(t, tm.client)
 		tm.taskMap.Store(t.InfoHash().String(), task)
 		return task, nil
 	}
@@ -49,8 +49,8 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 	}
 	task, err := tm.newTorrentTask(t)
 	if err == nil {
-		//task.Download()
-		task.GetInfo()
+		task.Download()
+		//task.GetInfo()
 		return t.InfoHash().String(), nil
 	}
 	return "", err
