@@ -49,14 +49,22 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 	}
 	task, err := tm.newTorrentTask(t)
 	if err == nil {
-		task.Download()
-		//task.GetInfo()
+		//task.Download()
+		task.GetInfo()
 		return t.InfoHash().String(), nil
 	}
 	return "", err
 }
 
-func (tm *TaskManager) StopTask(hash string) {
+func (tm *TaskManager) Download(hash string, files []string) error {
+	if task, ok := tm.taskMap.Load(hash); ok {
+		(task.(*TorrentTask)).Download(files)
+		return nil
+	}
+	return fmt.Errorf("任务 %s 不存在", hash)
+}
+
+func (tm *TaskManager) Stop(hash string) {
 	if task, ok := tm.taskMap.Load(hash); ok {
 		(task.(*TorrentTask)).Stop()
 	}

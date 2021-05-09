@@ -28,7 +28,7 @@ type downloadStatus struct {
 	run         bool
 }
 
-func (dt *TorrentTask) Download() {
+func (dt *TorrentTask) Download(files []string) {
 	go func() {
 		dt.download.run = true
 
@@ -38,10 +38,26 @@ func (dt *TorrentTask) Download() {
 			<-dt.info.getInfoEnd
 		}
 
+		var length int64 = 0
 		go func() {
 			log.Printf("开始下载 %s \n", t.InfoHash().String())
-			t.DownloadAll()
-			dt.download.downloadEnd <- struct{}{}
+			if len(files) == 0 {
+				t.DownloadAll()
+			} else {
+				fMap := make(map[string]byte)
+				for _, file := range files {
+					fMap[file] = 0
+				}
+				for _, f := range t.Files() {
+					if _, ok := fMap[f.DisplayPath()]; ok {
+						log.Printf("开始下载 %s \n", f.DisplayPath())
+						length += f.Length()
+						f.Download()
+					}
+				}
+			}
+			//dt.download.downloadEnd <- struct{}{}
+			log.Printf("结束下载 %s \n", t.InfoHash().String())
 		}()
 
 		go func() {
@@ -63,7 +79,7 @@ func (dt *TorrentTask) Download() {
 					time.Since(start),
 					t.Name(),
 					uint64(t.BytesCompleted()),
-					uint64(t.Length()),
+					length,
 					completedPieces,
 					t.NumPieces(),
 					partialPieces,

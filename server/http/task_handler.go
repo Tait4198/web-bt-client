@@ -29,7 +29,7 @@ func newUriTask(c *gin.Context) {
 func stopTask(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
 	tm := bt.GetTaskManager()
-	tm.StopTask(hash)
+	tm.Stop(hash)
 }
 
 func InitTaskRouter(groupRouter *gin.RouterGroup) {

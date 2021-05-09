@@ -23,5 +23,7 @@ func Router() http.Handler {
 	router := gin.New()
 	taskRouter := router.Group("task")
 	InitTaskRouter(taskRouter)
+	torrentRouter := router.Group("torrent")
+	InitTorrentRouter(torrentRouter)
 	return router
 }
