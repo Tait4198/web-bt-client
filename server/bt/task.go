@@ -125,7 +125,6 @@ func (dt *TorrentTask) GetInfo() {
 				} else {
 					log.Println(fmt.Errorf("bencode.Marshal 失败 %w \n", err))
 				}
-
 				// 通知信息已获取
 				dt.info.getInfoEnd <- struct{}{}
 				log.Printf("完成获取 %s \n", infoHash)
@@ -136,8 +135,9 @@ func (dt *TorrentTask) GetInfo() {
 			log.Printf("获取Torrent数量失败 %s \n", infoHash)
 		} else {
 			if mi, err := db.GetMetaInfo(infoHash); err == nil {
+				// remove
+				t.Drop()
 				if nt, err := dt.client.AddTorrent(mi); err == nil {
-					t.Drop()
 					dt.torrent = nt
 					// 通知信息已获取
 					dt.info.getInfoEnd <- struct{}{}
