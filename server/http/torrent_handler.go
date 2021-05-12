@@ -11,7 +11,7 @@ type DownloadParam struct {
 	Files    []string `json:"files"`
 }
 
-func downloadTorrent(c *gin.Context) {
+func torrentDownload(c *gin.Context) {
 	dp := DownloadParam{}
 	err := c.BindJSON(&dp)
 	if err != nil {
@@ -25,6 +25,17 @@ func downloadTorrent(c *gin.Context) {
 	}
 }
 
+func torrentInfo(c *gin.Context) {
+	hash := c.DefaultQuery("hash", "")
+	torrentInfo, err := bt.GetTaskManager().GetTorrentInfo(hash)
+	if err == nil {
+		c.JSON(http.StatusOK, DataJson(true, torrentInfo))
+	} else {
+		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
+	}
+}
+
 func InitTorrentRouter(groupRouter *gin.RouterGroup) {
-	groupRouter.POST("/download", downloadTorrent)
+	groupRouter.POST("/download", torrentDownload)
+	groupRouter.GET("/info", torrentInfo)
 }

@@ -64,10 +64,19 @@ func (tm *TaskManager) Download(hash string, files []string) error {
 	return fmt.Errorf("任务 %s 不存在", hash)
 }
 
-func (tm *TaskManager) Stop(hash string) {
+func (tm *TaskManager) Stop(hash string) error {
 	if task, ok := tm.taskMap.Load(hash); ok {
 		(task.(*TorrentTask)).Stop()
 	}
+	return fmt.Errorf("任务 %s 不存在", hash)
+}
+
+func (tm *TaskManager) GetTorrentInfo(hash string) (TaskTorrentInfo, error) {
+	if task, ok := tm.taskMap.Load(hash); ok {
+		return (task.(*TorrentTask)).GetTaskTorrentInfo(), nil
+	}
+	// todo tasks内加载
+	return TaskTorrentInfo{}, fmt.Errorf("未找到 %s 信息", hash)
 }
 
 var taskManager *TaskManager
@@ -75,7 +84,9 @@ var tmOnce sync.Once
 
 func GetTaskManager() *TaskManager {
 	tmOnce.Do(func() {
-		client, err := torrent.NewClient(nil)
+		cfg := torrent.NewDefaultClientConfig()
+		cfg.Seed = true
+		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
 		}

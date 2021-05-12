@@ -26,13 +26,23 @@ func newUriTask(c *gin.Context) {
 	}
 }
 
-func stopTask(c *gin.Context) {
+func pauseTask(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
 	tm := bt.GetTaskManager()
-	tm.Stop(hash)
+	err := tm.Stop(hash)
+	if err == nil {
+		c.JSON(http.StatusOK, DataJson(true, hash))
+	} else {
+		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
+	}
+}
+
+func resumeTask(c *gin.Context) {
+
 }
 
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/new/uri", newUriTask)
-	groupRouter.GET("/stop", stopTask)
+	groupRouter.GET("/pause", pauseTask)
+	groupRouter.GET("/resume", resumeTask)
 }
