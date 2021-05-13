@@ -13,4 +13,7 @@ func TestHash(t *testing.T) {
 	to, _ := client.AddMagnet("magnet:?xt=urn:btih:4ADB90ECE042C4D38446CC0A3954D043091ABABF")
 	<-to.GotInfo()
 	fmt.Println(to.InfoHash().String())
+
+	data := to.Stats().BytesReadData
+	fmt.Println(data.Int64())
 }

@@ -1,4 +1,4 @@
-package bt
+package task
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 	"sync"
 )
 
-type TaskManager struct {
+type Manager struct {
 	client  *torrent.Client
-	taskMap sync.Map
+	taskMap *Map
 }
 
-func (tm *TaskManager) taskExists(infoHash string) bool {
-	if _, ok := tm.taskMap.Load(infoHash); ok {
+func (tm *Manager) taskExists(infoHash string) bool {
+	if tm.taskMap.HasMember(infoHash) {
 		return true
 	}
 	conn := db.GetPool().Get(context.TODO())
@@ -32,7 +32,7 @@ func (tm *TaskManager) taskExists(infoHash string) bool {
 	return true
 }
 
-func (tm *TaskManager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) {
+func (tm *Manager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) {
 	if tm.taskExists(t.InfoHash().String()) {
 		return nil, fmt.Errorf("任务已存在 %s", t.InfoHash().String())
 	} else {
@@ -42,7 +42,7 @@ func (tm *TaskManager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) 
 	}
 }
 
-func (tm *TaskManager) AddUriTask(uri string) (string, error) {
+func (tm *Manager) AddUriTask(uri string) (string, error) {
 	t, err := tm.client.AddMagnet(uri)
 	if err != nil {
 		return "", err
@@ -56,33 +56,41 @@ func (tm *TaskManager) AddUriTask(uri string) (string, error) {
 	return "", err
 }
 
-func (tm *TaskManager) Download(hash string, files []string) error {
-	if task, ok := tm.taskMap.Load(hash); ok {
-		(task.(*TorrentTask)).Download(files)
+func (tm *Manager) Download(hash string, files []string) error {
+	if task := tm.taskMap.Load(hash); task != nil {
+		task.Download(files)
 		return nil
 	}
 	return fmt.Errorf("任务 %s 不存在", hash)
 }
 
-func (tm *TaskManager) Stop(hash string) error {
-	if task, ok := tm.taskMap.Load(hash); ok {
-		(task.(*TorrentTask)).Stop()
+func (tm *Manager) Stop(hash string) error {
+	if task := tm.taskMap.Load(hash); task != nil {
+		task.Stop()
+		return nil
 	}
 	return fmt.Errorf("任务 %s 不存在", hash)
 }
 
-func (tm *TaskManager) GetTorrentInfo(hash string) (TaskTorrentInfo, error) {
-	if task, ok := tm.taskMap.Load(hash); ok {
-		return (task.(*TorrentTask)).GetTaskTorrentInfo(), nil
+func (tm *Manager) Start(hash string) error {
+	if task := tm.taskMap.Load(hash); task != nil {
+		return task.Start()
 	}
-	// todo tasks内加载
-	return TaskTorrentInfo{}, fmt.Errorf("未找到 %s 信息", hash)
+	return fmt.Errorf("任务 %s 不存在", hash)
 }
 
-var taskManager *TaskManager
+func (tm *Manager) GetTorrentInfo(hash string) (TorrentInfoWrapper, error) {
+	if task := tm.taskMap.Load(hash); task != nil {
+		return task.GetTorrentInfo(), nil
+	}
+	// todo tasks内加载
+	return TorrentInfoWrapper{}, fmt.Errorf("未找到 %s 信息", hash)
+}
+
+var taskManager *Manager
 var tmOnce sync.Once
 
-func GetTaskManager() *TaskManager {
+func GetTaskManager() *Manager {
 	tmOnce.Do(func() {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
@@ -90,8 +98,9 @@ func GetTaskManager() *TaskManager {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		taskManager = &TaskManager{
-			client: client,
+		taskManager = &Manager{
+			client:  client,
+			taskMap: NewTaskMap(),
 		}
 	})
 	return taskManager

@@ -1,10 +1,11 @@
-package bt
+package task
 
 import (
 	"fmt"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/web-bt-client/db"
+	"github.com/web-bt-client/ws"
 	"log"
 	"time"
 )
@@ -26,109 +27,6 @@ type downloadStatus struct {
 	downloadEnd    chan struct{}
 	run            bool
 	downloadLength int64
-}
-
-type TaskTorrentInfo struct {
-	InfoHash string `json:"info_hash"`
-	Name     string `json:"name"`
-
-	Length         int64 `json:"length"`
-	BytesCompleted int64 `json:"bytes_completed"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
-
-	Files []TaskTorrentInfoFile `json:"files"`
-}
-
-type TaskTorrentInfoFile struct {
-	Path []string `json:"path"`
-
-	Length         int64 `json:"length"`
-	BytesCompleted int64 `json:"bytes_completed"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
-}
-
-func (dt *TorrentTask) GetTaskTorrentInfo() TaskTorrentInfo {
-	t := dt.torrent
-	torrentInfo := TaskTorrentInfo{
-		InfoHash:       t.InfoHash().String(),
-		Name:           t.Name(),
-		Length:         t.Length(),
-		BytesCompleted: t.BytesCompleted(),
-	}
-
-	completedPieces := 0
-	for _, psr := range t.PieceStateRuns() {
-		if psr.Complete {
-			completedPieces += psr.Length
-		}
-	}
-	torrentInfo.CompletedPieces = completedPieces
-	torrentInfo.Pieces = t.NumPieces()
-
-	var files = make([]TaskTorrentInfoFile, len(t.Files()))
-	for i, f := range t.Files() {
-		filePieces := 0
-		fileCompletedPieces := 0
-		for _, state := range f.State() {
-			filePieces++
-			if state.Complete {
-				fileCompletedPieces++
-			}
-		}
-		torrentFile := TaskTorrentInfoFile{
-			Path:            f.FileInfo().Path,
-			Length:          f.Length(),
-			BytesCompleted:  f.BytesCompleted(),
-			Pieces:          filePieces,
-			CompletedPieces: fileCompletedPieces,
-		}
-		files[i] = torrentFile
-	}
-	if len(files) == 1 && files[0].Path == nil {
-		files[0].Path = []string{t.Name()}
-	}
-
-	torrentInfo.Files = files
-
-	return torrentInfo
-}
-
-func (dt *TorrentTask) PrintStatus() {
-	t := dt.torrent
-
-	line2 := fmt.Sprintf("BytesRead %d BytesReadData(下载速度) %d BytesReadUsefulData %d",
-		t.Stats().BytesRead,
-		t.Stats().BytesReadData,
-		t.Stats().BytesReadUsefulData,
-	)
-	fmt.Println(line2)
-
-	line3 := fmt.Sprintf("BytesWritten %d BytesWrittenData %d",
-		t.Stats().BytesWritten,
-		t.Stats().BytesWrittenData,
-	)
-	fmt.Println(line3)
-
-	line4 := fmt.Sprintf("ChunksRead %d ChunksReadUseful %d ChunksReadWasted %d ChunksWritten %d MetadataChunksRead %d",
-		t.Stats().ChunksRead,
-		t.Stats().ChunksReadUseful,
-		t.Stats().ChunksReadWasted,
-		t.Stats().ChunksWritten,
-		t.Stats().MetadataChunksRead,
-	)
-	fmt.Println(line4)
-
-	line5 := fmt.Sprintf("TotalPeers %d ActivePeers %d HalfOpenPeers %d PendingPeers %d ",
-		t.Stats().TotalPeers,
-		t.Stats().ActivePeers,
-		t.Stats().HalfOpenPeers,
-		t.Stats().PendingPeers,
-	)
-	fmt.Println(line5)
 }
 
 func (dt *TorrentTask) Download(files []string) {
@@ -162,13 +60,13 @@ func (dt *TorrentTask) Download(files []string) {
 
 		go func() {
 			start := time.Now()
+			wsm := ws.GetWebSocketManager()
 		download:
 			for {
 				select {
 				case <-time.After(time.Second):
 					downloadEnd := true
 					for _, f := range t.Files() {
-						fmt.Printf("%d - %d\n", f.BytesCompleted(), f.Length())
 						if f.Priority() != torrent.PiecePriorityNone && f.BytesCompleted() != f.Length() {
 							downloadEnd = false
 						}
@@ -195,7 +93,8 @@ func (dt *TorrentTask) Download(files []string) {
 							partialPieces,
 						)
 						fmt.Println(line)
-						dt.PrintStatus()
+
+						wsm.Broadcast(dt.GetTorrentStats())
 					} else {
 						break download
 					}
@@ -271,6 +170,19 @@ func (dt *TorrentTask) Stop() {
 		dt.download.stop <- struct{}{}
 	}
 	dt.torrent.Drop()
+}
+
+func (dt *TorrentTask) Start() error {
+	mi := dt.torrent.Metainfo()
+	if nt, err := dt.client.AddTorrent(&mi); err == nil {
+		dt.torrent = nt
+
+		dt.Download([]string{})
+
+		return nil
+	} else {
+		return fmt.Errorf("任务开始失败 %w", err)
+	}
 }
 
 func NewTorrentTask(t *torrent.Torrent, c *torrent.Client) *TorrentTask {

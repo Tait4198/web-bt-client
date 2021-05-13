@@ -25,5 +25,7 @@ func Router() http.Handler {
 	InitTaskRouter(taskRouter)
 	torrentRouter := router.Group("torrent")
 	InitTorrentRouter(torrentRouter)
+	wsRouter := router.Group("ws")
+	InitWsRouter(wsRouter)
 	return router
 }

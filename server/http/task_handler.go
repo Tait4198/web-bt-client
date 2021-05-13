@@ -2,7 +2,7 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/web-bt-client/bt"
+	"github.com/web-bt-client/task"
 	"net/http"
 )
 
@@ -17,7 +17,7 @@ func newUriTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, MessageJson(false, "无效参数"))
 		return
 	}
-	tm := bt.GetTaskManager()
+	tm := task.GetTaskManager()
 	hash, err := tm.AddUriTask(newTaskParam.Uri)
 	if err == nil {
 		c.JSON(http.StatusOK, DataJson(true, hash))
@@ -28,7 +28,7 @@ func newUriTask(c *gin.Context) {
 
 func pauseTask(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
-	tm := bt.GetTaskManager()
+	tm := task.GetTaskManager()
 	err := tm.Stop(hash)
 	if err == nil {
 		c.JSON(http.StatusOK, DataJson(true, hash))
@@ -38,7 +38,14 @@ func pauseTask(c *gin.Context) {
 }
 
 func resumeTask(c *gin.Context) {
-
+	hash := c.DefaultQuery("hash", "")
+	tm := task.GetTaskManager()
+	err := tm.Start(hash)
+	if err == nil {
+		c.JSON(http.StatusOK, DataJson(true, hash))
+	} else {
+		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
+	}
 }
 
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
