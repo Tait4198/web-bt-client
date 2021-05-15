@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"crawshaw.io/sqlite/sqlitex"
-	"fmt"
-	"github.com/anacrolix/torrent/metainfo"
 	"log"
 	"sync"
 )
@@ -25,9 +23,17 @@ func InitDb() {
 
 		create table if not exists tasks
 		(
-			id        integer primary key autoincrement,
-			info_hash text not null ,
-			unique (info_hash)
+			info_hash            char(40) primary key not null,
+			torrent_name         varchar(2048)        not null,
+			complete             tinyint(1)                    default 0,
+			meta_info            tinyint(1)                    default 0,
+			pause                tinyint(1)                    default 0,
+			download_path        varchar(2048)        not null,
+			download_files       text                 not null default '',
+			file_length          bigint                        default 0,
+			complete_file_length bigint                        default 0,
+			create_time          datetime             not null default current_timestamp,
+			complete_time        datetime
 		);
 	`)
 	if err != nil {
@@ -53,38 +59,9 @@ func ExecSql(sql string, args ...interface{}) error {
 	return sqlitex.Exec(conn, sql, nil, args...)
 }
 
-func GetMetaInfo(infoHash string) (*metainfo.MetaInfo, error) {
-	conn := GetPool().Get(context.TODO())
-	defer GetPool().Put(conn)
-	stmt := conn.Prep("select * from torrent_data where info_hash = $hash")
-	defer func() {
-		if err := stmt.Reset(); err != nil {
-			log.Println(fmt.Errorf("GetMetaInfo stmt.Reset() 失败 %w \n", err))
-		}
-	}()
-	stmt.SetText("$hash", infoHash)
-	if hasRow, err := stmt.Step(); err != nil {
-		return nil, err
-	} else if !hasRow {
-		return nil, fmt.Errorf(" Hash %s 不存在 ", infoHash)
+func boolToInt(b bool) int {
+	if b {
+		return 1
 	}
-	r := stmt.GetReader("torrent_blob")
-	if mi, err := metainfo.Load(r); err == nil {
-		return mi, nil
-	} else {
-		return nil, fmt.Errorf("bytes.Reader 转换 MetaInfo 失败 %w \n", err)
-	}
-}
-
-func GetTorrentDataCount(infoHash string) int {
-	conn := GetPool().Get(context.TODO())
-	defer GetPool().Put(conn)
-	stmt := conn.Prep("select count(*) from torrent_data where info_hash = $hash")
-	stmt.SetText("$hash", infoHash)
-	if count, err := sqlitex.ResultInt(stmt); err == nil {
-		return count
-	} else {
-		log.Println(fmt.Errorf("获取 Hash %s 数量失败 %w \n", infoHash, err))
-	}
-	return -1
+	return 0
 }

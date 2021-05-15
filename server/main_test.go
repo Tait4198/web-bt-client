@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/storage"
 	"testing"
 )
 
@@ -16,4 +17,15 @@ func TestHash(t *testing.T) {
 
 	data := to.Stats().BytesReadData
 	fmt.Println(data.Int64())
+}
+
+func TestDownload(t *testing.T) {
+	client, _ := torrent.NewClient(nil)
+	to, _ := client.AddMagnet("magnet:?xt=urn:btih:4ADB90ECE042C4D38446CC0A3954D043091ABABF")
+	<-to.GotInfo()
+	to.Drop()
+	client.AddTorrentInfoHashWithStorage(to.InfoHash(), storage.NewMMap("D:\\Torrent"))
+	fmt.Println(to.Name())
+	to.DownloadAll()
+	client.WaitAll()
 }

@@ -66,7 +66,7 @@ func TestInsertBlob(t *testing.T) {
 }
 
 func TestGetTorrentMetaInfo(t *testing.T) {
-	mi, err := GetMetaInfo("90289fd34dfc1cf8f316a268add8354c85334458")
+	mi, err := SelectMetaInfo("90289fd34dfc1cf8f316a268add8354c85334458")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -108,6 +108,44 @@ func TestReadBlob(t *testing.T) {
 			log.Fatalln(err)
 		}
 		fmt.Println(t.Info().Name)
+	}
+}
+
+func TestGetTaskList(t *testing.T) {
+	InitDb()
+	tasks, err := SelectTaskList()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, task := range tasks {
+		fmt.Println(task)
+	}
+}
+
+func TestInsertTask(t *testing.T) {
+	InitDb()
+	task := Task{
+		InfoHash:     "90289fd34dfc1cf8f316a268add8354c85334458",
+		TorrentName:  "name",
+		Complete:     false,
+		DownloadPath: "/root",
+		CreateTime:   1621096438000,
+		CompleteTime: 1621096438000,
+	}
+	if err := InsertTask(task); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func TestSelectMetaInfoList(t *testing.T) {
+	InitDb()
+	infoHashList := []string{
+		"90289fd34dfc1cf8f316a268add8354c85334458",
+	}
+	if mis, err := SelectMateInfoList(infoHashList); err == nil {
+		fmt.Println(len(mis))
+	} else {
+		log.Fatalln(err)
 	}
 }
 

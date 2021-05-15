@@ -26,6 +26,10 @@ func newUriTask(c *gin.Context) {
 	}
 }
 
+func newFileTask(c *gin.Context) {
+
+}
+
 func pauseTask(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
 	tm := task.GetTaskManager()
@@ -50,6 +54,7 @@ func resumeTask(c *gin.Context) {
 
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/new/uri", newUriTask)
+	groupRouter.POST("/new/file", newFileTask)
 	groupRouter.GET("/pause", pauseTask)
 	groupRouter.GET("/resume", resumeTask)
 }

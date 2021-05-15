@@ -1,13 +1,14 @@
 package task
 
 import (
-	"context"
-	"crawshaw.io/sqlite/sqlitex"
 	"fmt"
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/storage"
 	"github.com/web-bt-client/db"
 	"log"
 	"sync"
+	"time"
 )
 
 type Manager struct {
@@ -19,38 +20,99 @@ func (tm *Manager) taskExists(infoHash string) bool {
 	if tm.taskMap.HasMember(infoHash) {
 		return true
 	}
-	conn := db.GetPool().Get(context.TODO())
-	defer db.GetPool().Put(conn)
-
-	stmt := conn.Prep("select count(*) from tasks where info_hash = $hash")
-	stmt.SetText("$hash", infoHash)
-	if v, err := sqlitex.ResultInt(stmt); err == nil {
-		return v > 0
-	} else {
-		log.Printf("Query Count Error %s", err)
-	}
-	return true
+	return db.SelectTaskCount(infoHash) > 0
 }
 
-func (tm *Manager) newTorrentTask(t *torrent.Torrent) (*TorrentTask, error) {
+// 通过MetaInfo创建指定下载路径Torrent
+func (tm *Manager) newMetaInfoTorrentWithPath(mi *metainfo.MetaInfo, path string) (*torrent.Torrent, error) {
+	if path == "" {
+		return tm.client.AddTorrent(mi)
+	}
+	spec := torrent.TorrentSpecFromMetaInfo(mi)
+	spec.Storage = storage.NewMMap(path)
+	if t, _, err := tm.client.AddTorrentSpec(spec); err == nil {
+		return t, nil
+	} else {
+		return nil, err
+	}
+}
+
+// 通过磁力链接创建指定下载路径Torrent
+func (tm *Manager) newUriTorrentWithPath(uri string, path string) (*torrent.Torrent, error) {
+	if path == "" {
+		return tm.client.AddMagnet(uri)
+	}
+	spec, err := torrent.TorrentSpecFromMagnetUri(uri)
+	if err != nil {
+		return nil, err
+	}
+	spec.Storage = storage.NewMMap(path)
+	if t, _, err := tm.client.AddTorrentSpec(spec); err == nil {
+		return t, nil
+	} else {
+		return nil, err
+	}
+}
+
+func (tm *Manager) recoveryTask(dbTask *db.Task, mi *metainfo.MetaInfo) error {
+	if t, err := tm.newMetaInfoTorrentWithPath(mi, dbTask.DownloadPath); err == nil {
+		infoHash := t.InfoHash().String()
+		// 恢复下载进度
+		if t.BytesCompleted() != dbTask.CompleteFileLength {
+			if err := db.UpdateTaskCompleteFileLength(infoHash, t.BytesCompleted()); err != nil {
+				return fmt.Errorf("任务 %s 下载进度恢复失败", infoHash)
+			}
+		}
+
+		task := newTaskSetPath(t, tm, dbTask.DownloadPath)
+		tm.taskMap.Store(t.InfoHash().String(), task)
+		// todo 细化信息获取与下载
+		go tm.TaskRun(task)
+		return nil
+	} else {
+		return err
+	}
+}
+
+func (tm *Manager) createTask(t *torrent.Torrent) (*TorrentTask, error) {
 	if tm.taskExists(t.InfoHash().String()) {
 		return nil, fmt.Errorf("任务已存在 %s", t.InfoHash().String())
 	} else {
-		task := NewTorrentTask(t, tm.client)
-		tm.taskMap.Store(t.InfoHash().String(), task)
-		return task, nil
+		dbTask := db.Task{
+			InfoHash:     t.InfoHash().String(),
+			DownloadPath: "D:\\Torrent",
+			CreateTime:   time.Now().UnixNano(),
+		}
+		if t.Info() == nil {
+			dbTask.TorrentName = t.InfoHash().String()
+		} else {
+			dbTask.TorrentName = t.Info().Name
+		}
+		if err := db.InsertTask(dbTask); err == nil {
+			task := newTask(t, tm)
+			tm.taskMap.Store(t.InfoHash().String(), task)
+			go tm.TaskRun(task)
+			return task, nil
+		} else {
+			return nil, err
+		}
+	}
+}
+
+func (tm *Manager) TaskRun(task *TorrentTask) {
+	if err := task.GetInfo(); err != nil {
+		log.Printf("获取 Torrent 信息失败 %s \n", err)
 	}
 }
 
 func (tm *Manager) AddUriTask(uri string) (string, error) {
-	t, err := tm.client.AddMagnet(uri)
+	// todo 下载参数封装
+	t, err := tm.newUriTorrentWithPath(uri, "D:\\Torrent")
 	if err != nil {
 		return "", err
 	}
-	task, err := tm.newTorrentTask(t)
+	_, err = tm.createTask(t)
 	if err == nil {
-		//task.Download()
-		task.GetInfo()
 		return t.InfoHash().String(), nil
 	}
 	return "", err
@@ -58,7 +120,7 @@ func (tm *Manager) AddUriTask(uri string) (string, error) {
 
 func (tm *Manager) Download(hash string, files []string) error {
 	if task := tm.taskMap.Load(hash); task != nil {
-		task.Download(files)
+		go task.Download(files)
 		return nil
 	}
 	return fmt.Errorf("任务 %s 不存在", hash)
@@ -104,4 +166,36 @@ func GetTaskManager() *Manager {
 		}
 	})
 	return taskManager
+}
+
+func InitTaskManager() {
+	tm := GetTaskManager()
+	if dbTasks, err := db.SelectActiveTaskList(); err == nil {
+		var infoHashList []string
+		dbTaskMap := make(map[string]db.Task)
+		for _, dbTask := range dbTasks {
+			infoHashList = append(infoHashList, dbTask.InfoHash)
+			dbTaskMap[dbTask.InfoHash] = dbTask
+
+		}
+		if mis, err := db.SelectMateInfoList(infoHashList); err == nil {
+			for _, mi := range mis {
+				infoHash := mi.HashInfoBytes().String()
+
+				var dbTask db.Task
+				if iDbTask, ok := dbTaskMap[infoHash]; ok {
+					dbTask = iDbTask
+				}
+				if err := tm.recoveryTask(&dbTask, mi); err == nil {
+					log.Printf("任务 %s 恢复成功 \n", mi.HashInfoBytes().String())
+				} else {
+					log.Printf("任务 %s 恢复失败 %s \n", mi.HashInfoBytes().String(), err)
+				}
+			}
+		} else {
+			log.Println(err)
+		}
+	} else {
+		log.Println(err)
+	}
 }
