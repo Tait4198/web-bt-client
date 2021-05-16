@@ -5,6 +5,7 @@ import (
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/storage"
 	"testing"
+	"time"
 )
 
 func TestHash(t *testing.T) {
@@ -28,4 +29,11 @@ func TestDownload(t *testing.T) {
 	fmt.Println(to.Name())
 	to.DownloadAll()
 	client.WaitAll()
+}
+
+func TestTick(t *testing.T) {
+	timeTickerChan := time.Tick(time.Second * 2)
+	fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
+	<-timeTickerChan
+	fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
 }

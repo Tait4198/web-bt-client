@@ -1,5 +1,7 @@
 package task
 
+import "fmt"
+
 type TorrentInfoWrapper struct {
 	InfoHash string `json:"info_hash"`
 	Name     string `json:"name"`
@@ -83,8 +85,11 @@ func (dt *TorrentTask) GetTorrentStats() TorrentStatsWrapper {
 	return torrentStatsWrapper
 }
 
-func (dt *TorrentTask) GetTorrentInfo() TorrentInfoWrapper {
+func (dt *TorrentTask) GetTorrentInfo() (TorrentInfoWrapper, error) {
 	t := dt.torrent
+	if t.Info() == nil {
+		return TorrentInfoWrapper{}, fmt.Errorf(" %s 未获取 MateInfo", t.InfoHash().String())
+	}
 	torrentInfoWrapper := TorrentInfoWrapper{
 		InfoHash:       t.InfoHash().String(),
 		Name:           t.Name(),
@@ -127,5 +132,5 @@ func (dt *TorrentTask) GetTorrentInfo() TorrentInfoWrapper {
 
 	torrentInfoWrapper.Files = files
 
-	return torrentInfoWrapper
+	return torrentInfoWrapper, nil
 }

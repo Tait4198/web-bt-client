@@ -11,11 +11,24 @@ import (
 )
 
 type TorrentTask struct {
-	torrent      *torrent.Torrent
-	manager      *Manager
-	info         infoStatus
-	downloadPath string
-	download     downloadStatus
+	torrent  *torrent.Torrent
+	manager  *Manager
+	active   bool
+	info     infoStatus
+	download downloadStatus
+	param    Param
+	wait     bool
+}
+
+type Param struct {
+	InfoHash      string   `json:"info_hash"`
+	DownloadPath  string   `json:"download_path"`
+	DownloadFiles []string `json:"download_files"`
+
+	// 是否下载文件
+	Download bool `json:"download"`
+	// 恢复下载时参数是否更新
+	Update bool `json:"update"`
 }
 
 type infoStatus struct {
@@ -30,7 +43,14 @@ type downloadStatus struct {
 	downloadLength int64
 }
 
-func (dt *TorrentTask) Download(files []string) {
+func (dt *TorrentTask) GetTaskParam() *Param {
+	return &dt.param
+}
+
+func (dt *TorrentTask) taskDownload() {
+	if dt.download.run || !dt.active {
+		return
+	}
 	t := dt.torrent
 	defer func() {
 		dt.download.run = false
@@ -38,7 +58,7 @@ func (dt *TorrentTask) Download(files []string) {
 	}()
 
 	if t.Info() == nil {
-		if err := dt.GetInfo(); err != nil {
+		if err := dt.taskGetInfo(); err != nil {
 			log.Printf("获取 Torrent 信息失败 %s \n", err)
 			return
 		}
@@ -47,14 +67,14 @@ func (dt *TorrentTask) Download(files []string) {
 	dt.download.run = true
 	go func() {
 		fMap := make(map[string]byte)
-		for _, file := range files {
+		for _, file := range dt.param.DownloadFiles {
 			fMap[file] = 0
 		}
 		for _, f := range t.Files() {
-			if len(files) == 0 {
+			if len(dt.param.DownloadFiles) == 0 {
 				f.Download()
 			} else {
-				if _, ok := fMap[f.DisplayPath()]; ok {
+				if _, ok := fMap[f.DisplayPath()]; ok && f.BytesCompleted() != f.Length() {
 					f.Download()
 				} else {
 					f.SetPriority(torrent.PiecePriorityNone)
@@ -103,8 +123,9 @@ func (dt *TorrentTask) Download(files []string) {
 
 					wsm.Broadcast(dt.GetTorrentStats())
 				} else {
-					// Download End
-					t.Drop()
+					if err := db.TaskComplete(t.BytesCompleted(), t.InfoHash().String()); err != nil {
+						log.Printf("任务 %s 完成信息更新失败 %s \n", t.InfoHash().String(), err)
+					}
 					break download
 				}
 			case <-dt.download.stop:
@@ -118,19 +139,30 @@ func (dt *TorrentTask) Download(files []string) {
 	<-dt.download.downloadEnd
 }
 
-func (dt *TorrentTask) GetInfo() error {
-	if dt.torrent.Info() != nil {
-		return nil
-	}
-
-	dt.info.run = true
-	infoHash := dt.torrent.InfoHash().String()
+func (dt *TorrentTask) taskGetInfo() error {
 	t := dt.torrent
 
 	defer func() {
+		if t.Info() != nil {
+			fileLen := t.Length()
+			if len(t.Info().Files) > 0 {
+				for _, f := range t.Info().Files {
+					fileLen += f.Length
+				}
+			}
+			if err := db.UpdateTaskMetaInfo(t.InfoHash().String(), t.Info().Name, fileLen); err != nil {
+				log.Printf("任务 %s 更新 MetaInfo 失败 \n", t.InfoHash().String())
+			}
+		}
 		dt.info.run = false
 		log.Printf("GetInfo End %s %s \n", t.Name(), t.InfoHash().String())
 	}()
+
+	if dt.info.run || dt.torrent.Info() != nil || !dt.active {
+		return nil
+	}
+	infoHash := dt.torrent.InfoHash().String()
+	dt.info.run = true
 
 	torrentCount := db.SelectTorrentDataCount(infoHash)
 	if torrentCount == 0 {
@@ -157,23 +189,13 @@ func (dt *TorrentTask) GetInfo() error {
 	} else if torrentCount == -1 {
 		return fmt.Errorf("获取Torrent数量失败 %s \n", infoHash)
 	} else {
-		if mi, err := db.SelectMetaInfo(infoHash); err == nil {
-			// drop torrent
-			t.Drop()
-			if nt, err := dt.manager.newMetaInfoTorrentWithPath(mi, dt.downloadPath); err == nil {
-				dt.torrent = nt
-				// update t
-				t = nt
-			} else {
-				return fmt.Errorf("MetaInfo 转换 Torrent 失败 %w \n", err)
-			}
+		t.Drop()
+		if nt, err := dt.manager.recoveryTorrentWithHash(infoHash); err == nil {
+			dt.torrent = nt
+			t = nt
 		} else {
-			return fmt.Errorf("GetMetaInfo 失败 %w \n", err)
+			return err
 		}
-	}
-
-	if err := db.UpdateTaskMetaInfo(t.InfoHash().String(), t.Info().Name, t.Info().Length); err != nil {
-		return err
 	}
 
 	// GetInfo Success
@@ -181,37 +203,71 @@ func (dt *TorrentTask) GetInfo() error {
 	return nil
 }
 
-func (dt *TorrentTask) Stop() {
+func (dt *TorrentTask) Stop() error {
+
+	// 停止Task
+	if !dt.active {
+		return fmt.Errorf("任务 %s 已停止", dt.param.InfoHash)
+	}
+	if err := db.UpdateTaskPause(true, dt.param.InfoHash); err != nil {
+		return fmt.Errorf("任务 %s 停止失败 %w", dt.torrent.InfoHash().String(), err)
+	}
 	if dt.info.run {
 		dt.info.stop <- struct{}{}
 	}
 	if dt.download.run {
 		dt.download.stop <- struct{}{}
 	}
+	dt.active = false
 	dt.torrent.Drop()
+	return nil
 }
 
-func (dt *TorrentTask) Start() error {
-	mi := dt.torrent.Metainfo()
-	if nt, err := dt.manager.client.AddTorrent(&mi); err == nil {
-		dt.torrent = nt
-
-		dt.Download([]string{})
-
-		return nil
-	} else {
-		return fmt.Errorf("任务开始失败 %w", err)
+func (dt *TorrentTask) Start(reloadTorrent bool) error {
+	if dt.active {
+		return fmt.Errorf("任务 %s 已启动", dt.param.InfoHash)
 	}
+	if reloadTorrent {
+		mi := dt.torrent.Metainfo()
+		if nt, err := dt.manager.newMetaInfoTorrentWithPath(&mi, dt.param.DownloadPath); err == nil {
+			dt.torrent = nt
+		} else {
+			return fmt.Errorf("任务 %s 重新加载 Torrent 失败 %w", dt.torrent.InfoHash().String(), err)
+		}
+	}
+	if err := db.UpdateTaskPause(false, dt.param.InfoHash); err != nil {
+		return fmt.Errorf("任务 %s 启动失败 %w", dt.torrent.InfoHash().String(), err)
+	}
+	dt.active = true
+	go dt.taskExec()
+	return nil
 }
 
-func newTask(t *torrent.Torrent, tm *Manager) *TorrentTask {
-	return newTaskSetPath(t, tm, "")
+func (dt *TorrentTask) taskExec() {
+	if err := dt.taskGetInfo(); err == nil && dt.param.Download {
+		dt.taskDownload()
+	}
+	dt.active = false
 }
 
-func newTaskSetPath(t *torrent.Torrent, tm *Manager, downloadPath string) *TorrentTask {
+func (dt *TorrentTask) TaskWait() error {
+	if !dt.wait {
+		dt.wait = true
+		go func() {
+			tick := time.Tick(time.Second * 10)
+			<-tick
+			dt.wait = false
+		}()
+		return nil
+	}
+	return fmt.Errorf("任务 %s 等待中", dt.torrent.InfoHash().String())
+}
+
+func newTask(t *torrent.Torrent, tm *Manager, param Param) *TorrentTask {
 	return &TorrentTask{
 		torrent: t,
 		manager: tm,
+		active:  false,
 		info: infoStatus{
 			stop: make(chan struct{}),
 			run:  false,
@@ -221,6 +277,7 @@ func newTaskSetPath(t *torrent.Torrent, tm *Manager, downloadPath string) *Torre
 			downloadEnd: make(chan struct{}),
 			run:         false,
 		},
-		downloadPath: downloadPath,
+		param: param,
+		wait:  false,
 	}
 }

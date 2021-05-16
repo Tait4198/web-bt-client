@@ -28,12 +28,14 @@ func InitDb() {
 			complete             tinyint(1)                    default 0,
 			meta_info            tinyint(1)                    default 0,
 			pause                tinyint(1)                    default 0,
+			download             tinyint(1)                    default 0,
 			download_path        varchar(2048)        not null,
 			download_files       text                 not null default '',
 			file_length          bigint                        default 0,
 			complete_file_length bigint                        default 0,
 			create_time          datetime             not null default current_timestamp,
-			complete_time        datetime
+			complete_time        datetime,
+			create_torrent_info  varchar(2048)        not null
 		);
 	`)
 	if err != nil {
