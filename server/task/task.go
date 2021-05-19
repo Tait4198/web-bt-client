@@ -91,7 +91,7 @@ func (dt *TorrentTask) taskDownload() {
 	download:
 		for {
 			select {
-			case <-time.After(time.Second):
+			case <-time.After(500 * time.Millisecond):
 				downloadEnd := true
 				for _, f := range t.Files() {
 					if f.Priority() != torrent.PiecePriorityNone && f.BytesCompleted() != f.Length() {
@@ -121,7 +121,7 @@ func (dt *TorrentTask) taskDownload() {
 					)
 					fmt.Println(line)
 
-					wsm.Broadcast(dt.GetTorrentStats())
+					wsm.Broadcast(dt.GetTorrentStats(false, true))
 				} else {
 					if err := db.TaskComplete(t.BytesCompleted(), t.InfoHash().String()); err != nil {
 						log.Printf("任务 %s 完成信息更新失败 %s \n", t.InfoHash().String(), err)
@@ -228,6 +228,7 @@ func (dt *TorrentTask) Start(reloadTorrent bool) error {
 		return fmt.Errorf("任务 %s 已启动", dt.param.InfoHash)
 	}
 	if reloadTorrent {
+		dt.torrent.Drop()
 		mi := dt.torrent.Metainfo()
 		if nt, err := dt.manager.newMetaInfoTorrentWithPath(&mi, dt.param.DownloadPath); err == nil {
 			dt.torrent = nt

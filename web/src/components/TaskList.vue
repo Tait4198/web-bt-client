@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import {getTaskList} from "../http/task";
+import {getTaskList} from "@/http/task";
 import TaskItem from "./TaskItem"
 
 export default {
@@ -28,9 +28,9 @@ export default {
 
     this.$bus.on("ws-message", (e) => {
       let obj = JSON.parse(e.data)
-      console.log(obj)
       if (this.tasks[obj.info_hash]) {
-        this.$set(this.tasks[obj.info_hash], 'status', obj)
+        this.$set(this.tasks[obj.info_hash], 'stats', obj)
+        console.log(this.tasks[obj.info_hash])
       }
     })
   },

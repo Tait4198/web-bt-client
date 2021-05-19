@@ -31,7 +31,10 @@ func (tm *Manager) newMetaInfoTorrentWithPath(mi *metainfo.MetaInfo, path string
 	}
 	spec := torrent.TorrentSpecFromMetaInfo(mi)
 	spec.Storage = storage.NewMMap(path)
-	if t, _, err := tm.client.AddTorrentSpec(spec); err == nil {
+	if t, n, err := tm.client.AddTorrentSpec(spec); err == nil {
+		if !n {
+			return nil, fmt.Errorf("任务 %s 已在客户端无法创建", t.InfoHash().String())
+		}
 		return t, nil
 	} else {
 		return nil, err
@@ -48,7 +51,11 @@ func (tm *Manager) newUriTorrentWithPath(uri string, path string) (*torrent.Torr
 		return nil, err
 	}
 	spec.Storage = storage.NewMMap(path)
-	if t, _, err := tm.client.AddTorrentSpec(spec); err == nil {
+
+	if t, n, err := tm.client.AddTorrentSpec(spec); err == nil {
+		if !n {
+			return nil, fmt.Errorf("任务 %s 已在客户端无法创建", t.InfoHash().String())
+		}
 		return t, nil
 	} else {
 		return nil, err
@@ -112,6 +119,7 @@ func (tm *Manager) AddUriTask(uri string, param Param) (string, error) {
 		return "", fmt.Errorf("任务 %s 已存在", t.InfoHash().String())
 	}
 	if param.DownloadPath != "" {
+		t.Drop()
 		t, err = tm.newUriTorrentWithPath(uri, param.DownloadPath)
 	} else {
 		t, err = tm.client.AddMagnet(uri)
@@ -202,10 +210,10 @@ func (tm *Manager) Restart(param Param) error {
 
 func (tm *Manager) GetTorrentInfo(infoHash string) (TorrentInfoWrapper, error) {
 	if task := tm.taskMap.Load(infoHash); task != nil {
-		return task.GetTorrentInfo()
+		return task.GetTorrentInfo(true)
 	}
 	if task, err := tm.recoveryTaskWithHash(infoHash); err == nil {
-		return task.GetTorrentInfo()
+		return task.GetTorrentInfo(true)
 	}
 	return TorrentInfoWrapper{}, fmt.Errorf("未找到 %s 信息", infoHash)
 }
@@ -216,6 +224,11 @@ func (tm *Manager) GetTasks() ([]db.Task, error) {
 	} else {
 		if tasks == nil {
 			return []db.Task{}, err
+		}
+		for _, dbTask := range tasks {
+			if task, err := tm.getTask(dbTask.InfoHash); err == nil {
+				dbTask.CompleteFileLength = task.torrent.BytesCompleted()
+			}
 		}
 		return tasks, err
 	}
