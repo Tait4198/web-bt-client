@@ -72,10 +72,20 @@ func restartTask(c *gin.Context) {
 	}
 }
 
+func taskList(c *gin.Context) {
+	tasks, err := task.GetTaskManager().GetTasks()
+	if err == nil {
+		c.JSON(http.StatusOK, DataJson(true, tasks))
+	} else {
+		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
+	}
+}
+
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/new/uri", newUriTask)
 	groupRouter.POST("/new/file", newFileTask)
 	groupRouter.GET("/stop", stopTask)
 	groupRouter.POST("/start", startTask)
 	groupRouter.POST("/restart", restartTask)
+	groupRouter.GET("/list", taskList)
 }

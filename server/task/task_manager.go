@@ -96,7 +96,7 @@ func (tm *Manager) getTask(infoHash string) (*TorrentTask, error) {
 	return task, nil
 }
 
-func (tm *Manager) TaskRun(task *TorrentTask, reloadTorrent bool) error {
+func (tm *Manager) run(task *TorrentTask, reloadTorrent bool) error {
 	if err := task.Start(reloadTorrent); err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (tm *Manager) AddUriTask(uri string, param Param) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := tm.TaskRun(task, false); err != nil {
+	if err := tm.run(task, false); err != nil {
 		return "", err
 	}
 	return infoHash, nil
@@ -158,7 +158,7 @@ func (tm *Manager) Start(param Param, wait bool) error {
 				}
 			}
 		}
-		return tm.TaskRun(task, true)
+		return tm.run(task, true)
 	}
 	return fmt.Errorf("任务 %s 不存在", param.InfoHash)
 }
@@ -211,6 +211,10 @@ func (tm *Manager) GetTorrentInfo(infoHash string) (TorrentInfoWrapper, error) {
 	return TorrentInfoWrapper{}, fmt.Errorf("未找到 %s 信息", infoHash)
 }
 
+func (tm *Manager) GetTasks() ([]db.Task, error) {
+	return db.SelectTaskList()
+}
+
 var taskManager *Manager
 var tmOnce sync.Once
 
@@ -247,7 +251,7 @@ func InitTaskManager() {
 			for _, dbTask := range dbTasks {
 				mi := miMap[dbTask.InfoHash]
 				if task, err := tm.recoveryTask(&dbTask, mi); err == nil {
-					if err := tm.TaskRun(task, false); err == nil {
+					if err := tm.run(task, false); err == nil {
 						log.Printf("任务 %s 恢复成功 \n", dbTask.InfoHash)
 					} else {
 						log.Println(err)
