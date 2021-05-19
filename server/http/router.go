@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -21,6 +22,8 @@ func DataJson(status bool, data interface{}) gin.H {
 
 func Router() http.Handler {
 	router := gin.New()
+	router.Use(cors.Default())
+
 	taskRouter := router.Group("task")
 	InitTaskRouter(taskRouter)
 	torrentRouter := router.Group("torrent")

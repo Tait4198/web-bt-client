@@ -2,7 +2,6 @@ package task
 
 import (
 	"fmt"
-	logger "github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
@@ -212,7 +211,14 @@ func (tm *Manager) GetTorrentInfo(infoHash string) (TorrentInfoWrapper, error) {
 }
 
 func (tm *Manager) GetTasks() ([]db.Task, error) {
-	return db.SelectTaskList()
+	if tasks, err := db.SelectTaskList(); err != nil {
+		return db.SelectTaskList()
+	} else {
+		if tasks == nil {
+			return []db.Task{}, err
+		}
+		return tasks, err
+	}
 }
 
 var taskManager *Manager
@@ -222,7 +228,8 @@ func GetTaskManager() *Manager {
 	tmOnce.Do(func() {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
-		cfg.Logger = logger.Discard
+		//cfg.Logger = logger.Discard
+		cfg.ListenPort = 42071
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
