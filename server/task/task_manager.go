@@ -226,7 +226,7 @@ func (tm *Manager) GetTasks() ([]db.Task, error) {
 			return []db.Task{}, err
 		}
 		for _, dbTask := range tasks {
-			if task, err := tm.getTask(dbTask.InfoHash); err == nil {
+			if task, err := tm.getTask(dbTask.InfoHash); err == nil && task.torrent.BytesCompleted() > 0 {
 				dbTask.CompleteFileLength = task.torrent.BytesCompleted()
 			}
 		}
@@ -242,7 +242,7 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42071
+		cfg.ListenPort = 42070
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)

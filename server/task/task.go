@@ -37,10 +37,11 @@ type infoStatus struct {
 }
 
 type downloadStatus struct {
-	stop           chan struct{}
-	downloadEnd    chan struct{}
-	run            bool
-	downloadLength int64
+	stop                chan struct{}
+	downloadEnd         chan struct{}
+	run                 bool
+	downloadLength      int64
+	lastCompletedPieces int
 }
 
 func (dt *TorrentTask) GetTaskParam() *Param {
@@ -91,13 +92,14 @@ func (dt *TorrentTask) taskDownload() {
 	download:
 		for {
 			select {
-			case <-time.After(500 * time.Millisecond):
+			case <-time.After(time.Second):
 				downloadEnd := true
 				for _, f := range t.Files() {
 					if f.Priority() != torrent.PiecePriorityNone && f.BytesCompleted() != f.Length() {
 						downloadEnd = false
 					}
 				}
+
 				if !downloadEnd {
 					var completedPieces, partialPieces int
 					psrs := t.PieceStateRuns()
@@ -109,6 +111,15 @@ func (dt *TorrentTask) taskDownload() {
 							partialPieces += r.Length
 						}
 					}
+
+					if completedPieces > dt.download.lastCompletedPieces {
+						if err := db.UpdateTaskCompleteFileLength(t.BytesCompleted(), t.InfoHash().String()); err == nil {
+							dt.download.lastCompletedPieces = completedPieces
+						} else {
+							log.Printf("任务 %s CompleteFileLength 更新失败 %s", t.InfoHash().String(), err)
+						}
+					}
+
 					line := fmt.Sprintf(
 						"\n%v: downloading %q: %d/%d, %d/%d pieces completed (%d partial)",
 						time.Since(start),
@@ -179,6 +190,11 @@ func (dt *TorrentTask) taskGetInfo() error {
 			if b, err := bencode.Marshal(t.Metainfo()); err == nil {
 				if err := db.InsertTorrentData(infoHash, b); err != nil {
 					return fmt.Errorf("Hash %s 写入 SQLite 失败 %w \n", infoHash, err)
+				}
+				if ti, err := dt.GetTorrentInfo(false); err == nil {
+					ws.GetWebSocketManager().Broadcast(ti)
+				} else {
+					return fmt.Errorf(" %s 信息完成获取推送失败 %w", infoHash, err)
 				}
 			} else {
 				return fmt.Errorf("bencode.Marshal 失败 %w \n", err)
@@ -253,11 +269,28 @@ func (dt *TorrentTask) taskExec() {
 
 func (dt *TorrentTask) TaskWait() error {
 	if !dt.wait {
+
 		dt.wait = true
+		ws.GetWebSocketManager().Broadcast(TorrentTaskWait{
+			TorrentBase: TorrentBase{
+				InfoHash: dt.torrent.InfoHash().String(),
+				Type:     TorrentWait,
+			},
+			Status: true,
+		})
+
 		go func() {
 			tick := time.Tick(time.Second * 10)
 			<-tick
+
 			dt.wait = false
+			ws.GetWebSocketManager().Broadcast(TorrentTaskWait{
+				TorrentBase: TorrentBase{
+					InfoHash: dt.torrent.InfoHash().String(),
+					Type:     TorrentWait,
+				},
+				Status: false,
+			})
 		}()
 		return nil
 	}

@@ -1,16 +1,16 @@
 <template>
-  <a-card style="margin: 0 12px">
+  <a-card class="item">
     <a-row>
       <a-col>
         <span>{{ taskData.torrent_name + ' ' + taskData.info_hash }}</span>
       </a-col>
       <a-col>
-        <div style="padding-top: 12px; padding-bottom: 12px">
+        <div class="progress">
           <a-progress :percent="percent" :strokeWidth="8"/>
         </div>
       </a-col>
       <a-col :lg="12" :sm="24" :xs="24">
-        <div style="line-height: 16px">
+        <div class="status">
           <a-space :size="20">
             <span>{{ read.speed }} / {{ write.speed }}</span>
             <span v-if="peers !== ''">Peers {{ peers }}</span>
@@ -131,6 +131,17 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="less" scoped>
+.item {
+  margin: 0 12px;
 
+  .progress {
+    padding-top: 12px;
+    padding-bottom: 12px
+  }
+
+  .status {
+    line-height: 16px
+  }
+}
 </style>

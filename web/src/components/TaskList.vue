@@ -11,6 +11,7 @@
 <script>
 import {getTaskList} from "@/http/task";
 import TaskItem from "./TaskItem"
+import {TorrentInfo, TorrentStats} from "../constant/constant";
 
 export default {
   name: "TaskList",
@@ -18,6 +19,9 @@ export default {
     TaskItem
   },
   mounted() {
+    this.typFuncMap.set(TorrentStats, this.torrentStats)
+    this.typFuncMap.set(TorrentInfo, this.torrentInfo)
+
     getTaskList().then(res => {
       let {data = []} = res
       for (let i = 0; i < data.length; i++) {
@@ -28,9 +32,10 @@ export default {
 
     this.$bus.on("ws-message", (e) => {
       let obj = JSON.parse(e.data)
-      if (this.tasks[obj.info_hash]) {
-        this.$set(this.tasks[obj.info_hash], 'stats', obj)
-        console.log(this.tasks[obj.info_hash])
+      let infoHash = obj.info_hash
+      let type = obj.type
+      if (this.typFuncMap.has(type) && this.tasks[infoHash]) {
+        this.typFuncMap.get(type)(this.tasks[infoHash], obj)
       }
     })
   },
@@ -39,9 +44,18 @@ export default {
       return Object.values(this.tasks).sort((o1, o2) => o1.id - o2.id)
     }
   },
+  methods: {
+    torrentStats(taskData, obj) {
+      this.$set(taskData, 'stats', obj)
+    },
+    torrentInfo(taskData, obj) {
+      taskData.torrent_name = obj.name
+    }
+  },
   data() {
     return {
-      tasks: []
+      tasks: [],
+      typFuncMap: new Map()
     }
   }
 }

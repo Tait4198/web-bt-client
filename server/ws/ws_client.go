@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"github.com/gorilla/websocket"
 	"log"
 	"time"
@@ -74,8 +75,20 @@ func (wsc *WebSocketClient) writePump() {
 				}
 				return
 			}
-			if err := wsc.conn.WriteJSON(message); err != nil {
-				log.Printf("Client %s Send Message Error %v\n", wsc.id, err)
+
+			w, err := wsc.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			e := json.NewEncoder(w)
+			e.Encode(message)
+			n := len(wsc.writeMessage)
+			for i := 0; i < n; i++ {
+				e.Encode(<-wsc.writeMessage)
+			}
+			if err := w.Close(); err != nil {
+				log.Printf("Client %s Writer Close Error %v\n", wsc.id, err)
+				return
 			}
 		case <-ticker.C:
 			if err := wsc.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
@@ -95,8 +108,8 @@ func newWebSocketClient(id string, conn *websocket.Conn, wsm *WebSocketManager) 
 		id:           id,
 		conn:         conn,
 		wsm:          wsm,
-		readMessage:  make(chan []byte, 16),
-		writeMessage: make(chan interface{}, 16),
+		readMessage:  make(chan []byte, 32),
+		writeMessage: make(chan interface{}, 32),
 	}
 	go wsc.readPump()
 	go wsc.writePump()

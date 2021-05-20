@@ -49,8 +49,7 @@ func (tm *Manager) recoveryTask(dbTask *db.Task, mi *metainfo.MetaInfo) (*Torren
 	if t != nil {
 		infoHash := t.InfoHash().String()
 		// 恢复下载进度
-		fmt.Printf("%s %d\n", t.Info().Name, t.BytesCompleted())
-		if t.BytesCompleted() != dbTask.CompleteFileLength {
+		if t.BytesCompleted() > 0 && t.BytesCompleted() != dbTask.CompleteFileLength {
 			if err := db.UpdateTaskCompleteFileLength(t.BytesCompleted(), infoHash); err != nil {
 				return nil, fmt.Errorf("任务 %s 下载进度恢复失败", infoHash)
 			}

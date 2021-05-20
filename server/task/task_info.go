@@ -2,61 +2,15 @@ package task
 
 import "fmt"
 
-type TorrentBase struct {
-	InfoHash       string `json:"info_hash"`
-	Length         int64  `json:"length"`
-	DownloadLength int64  `json:"download_length"`
-	BytesCompleted int64  `json:"bytes_completed"`
-}
-
-type TorrentInfoWrapper struct {
-	TorrentBase
-	Name string `json:"name"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
-
-	Files []TorrentInfoFileWrapper `json:"files,omitempty"`
-}
-
-type TorrentInfoFileWrapper struct {
-	Path []string `json:"path"`
-
-	Length         int64 `json:"length"`
-	BytesCompleted int64 `json:"bytes_completed"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
-}
-
-type TorrentStatsWrapper struct {
-	TorrentBase
-
-	BytesRead           int64 `json:"bytes_read"`
-	BytesReadData       int64 `json:"bytes_read_data"`
-	BytesReadUsefulData int64 `json:"bytes_read_useful_data"`
-
-	BytesWritten     int64 `json:"bytes_written"`
-	BytesWrittenData int64 `json:"bytes_written_data"`
-
-	ChunksRead         int64 `json:"chunks_read"`
-	ChunksReadUseful   int64 `json:"chunks_read_useful"`
-	ChunksReadWasted   int64 `json:"chunks_read_wasted"`
-	ChunksWritten      int64 `json:"chunks_written"`
-	MetadataChunksRead int64 `json:"metadata_chunks_read"`
-
-	TotalPeers    int `json:"total_peers"`
-	ActivePeers   int `json:"active_peers"`
-	HalfOpenPeers int `json:"half_open_peers"`
-	PendingPeers  int `json:"pending_peers"`
-}
-
 func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) TorrentStatsWrapper {
 	torrentStats := dt.torrent.Stats()
 
 	torrentStatsWrapper := TorrentStatsWrapper{
 		TorrentBase: TorrentBase{
-			InfoHash:       dt.torrent.InfoHash().String(),
+			InfoHash: dt.torrent.InfoHash().String(),
+			Type:     TorrentStats,
+		},
+		TorrentDownload: TorrentDownload{
 			Length:         dt.torrent.Length(),
 			DownloadLength: dt.download.downloadLength,
 			BytesCompleted: dt.torrent.BytesCompleted(),
@@ -105,7 +59,10 @@ func (dt *TorrentTask) GetTorrentInfo(includeFile bool) (TorrentInfoWrapper, err
 	}
 	torrentInfoWrapper := TorrentInfoWrapper{
 		TorrentBase: TorrentBase{
-			InfoHash:       dt.torrent.InfoHash().String(),
+			InfoHash: dt.torrent.InfoHash().String(),
+			Type:     TorrentInfo,
+		},
+		TorrentDownload: TorrentDownload{
 			Length:         dt.torrent.Length(),
 			DownloadLength: dt.download.downloadLength,
 			BytesCompleted: dt.torrent.BytesCompleted(),

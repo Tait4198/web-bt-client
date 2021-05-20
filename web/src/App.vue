@@ -1,17 +1,17 @@
 <template>
   <div id="app">
-    <index></index>
+    <app-index></app-index>
   </div>
 </template>
 
 <script>
 
-import Index from "@/components/Index";
+import AppIndex from "@/components/AppIndex";
 
 export default {
   name: 'App',
   components: {
-    Index
+    AppIndex
   },
   data() {
     return {}

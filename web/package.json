@@ -14,7 +14,6 @@
     "byte-size": "^7.0.1",
     "core-js": "^3.6.5",
     "less": "^4.1.1",
-    "less-loader": "^7.3.0",
     "modern-normalize": "^1.1.0",
     "vue": "^2.6.11",
     "vue-bus": "^1.2.1"
@@ -28,6 +27,7 @@
     "babel-plugin-component": "^1.1.1",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^6.2.2",
+    "less-loader": "^7.3.0",
     "vue-template-compiler": "^2.6.11"
   },
   "eslintConfig": {
