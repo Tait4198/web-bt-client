@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/storage"
 	"testing"
 	"time"
 )
@@ -22,13 +21,10 @@ func TestHash(t *testing.T) {
 
 func TestDownload(t *testing.T) {
 	client, _ := torrent.NewClient(nil)
-	to, _ := client.AddMagnet("magnet:?xt=urn:btih:4ADB90ECE042C4D38446CC0A3954D043091ABABF")
+	to, _ := client.AddTorrentFromFile("/Users/chenyitao/Downloads/ubuntu-20.04.2-live-server-amd64.iso.torrent")
 	<-to.GotInfo()
+	fmt.Println(to.InfoHash().String())
 	to.Drop()
-	client.AddTorrentInfoHashWithStorage(to.InfoHash(), storage.NewMMap("D:\\Torrent"))
-	fmt.Println(to.Name())
-	to.DownloadAll()
-	client.WaitAll()
 }
 
 func TestTick(t *testing.T) {

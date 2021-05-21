@@ -37,16 +37,20 @@ export default {
     })
 
     this.$bus.on("ws-message", (e) => {
-      let obj = JSON.parse(e.data)
-      let infoHash = obj.info_hash
-      let type = obj.type
-      if (this.typFuncMap.has(type)) {
-        if (this.tasks[infoHash]) {
-          this.typFuncMap.get(type)(this.tasks[infoHash], obj)
-        } else {
-          this.typFuncMap.get(type)(obj)
+      e.data.split('\n').forEach(item => {
+        if (item) {
+          let obj = JSON.parse(item)
+          let infoHash = obj.info_hash
+          let type = obj.type
+          if (this.typFuncMap.has(type)) {
+            if (this.tasks[infoHash]) {
+              this.typFuncMap.get(type)(this.tasks[infoHash], obj)
+            } else {
+              this.typFuncMap.get(type)(obj)
+            }
+          }
         }
-      }
+      })
     })
   },
   computed: {
