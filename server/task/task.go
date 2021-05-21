@@ -265,36 +265,37 @@ func (dt *TorrentTask) taskExec() {
 		dt.taskDownload()
 	}
 	dt.active = false
+	if err := db.UpdateTaskPause(true, dt.torrent.InfoHash().String()); err == nil {
+		dt.BroadcastTaskStatus(TorrentPause, true)
+	}
 }
 
 func (dt *TorrentTask) TaskWait() error {
 	if !dt.wait {
 
 		dt.wait = true
-		ws.GetWebSocketManager().Broadcast(TorrentTaskWait{
-			TorrentBase: TorrentBase{
-				InfoHash: dt.torrent.InfoHash().String(),
-				Type:     TorrentWait,
-			},
-			Status: true,
-		})
+		dt.BroadcastTaskStatus(TorrentWait, dt.wait)
 
 		go func() {
-			tick := time.Tick(time.Second * 10)
+			tick := time.Tick(time.Second * 3)
 			<-tick
 
 			dt.wait = false
-			ws.GetWebSocketManager().Broadcast(TorrentTaskWait{
-				TorrentBase: TorrentBase{
-					InfoHash: dt.torrent.InfoHash().String(),
-					Type:     TorrentWait,
-				},
-				Status: false,
-			})
+			dt.BroadcastTaskStatus(TorrentWait, dt.wait)
 		}()
 		return nil
 	}
 	return fmt.Errorf("任务 %s 等待中", dt.torrent.InfoHash().String())
+}
+
+func (dt *TorrentTask) BroadcastTaskStatus(messageType MessageType, status bool) {
+	ws.GetWebSocketManager().Broadcast(TorrentTaskStatus{
+		TorrentBase: TorrentBase{
+			InfoHash: dt.torrent.InfoHash().String(),
+			Type:     messageType,
+		},
+		Status: status,
+	})
 }
 
 func newTask(t *torrent.Torrent, tm *Manager, param Param) *TorrentTask {

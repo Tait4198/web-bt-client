@@ -6,7 +6,13 @@ import {
     Space,
     Card,
     List,
-    Progress
+    Progress,
+    Icon,
+    Modal,
+    FormModel,
+    Input,
+    message,
+    notification
 } from 'ant-design-vue'
 import App from './App.vue';
 import VueBus from 'vue-bus';
@@ -20,9 +26,17 @@ Vue.component(List.name, List)
 Vue.component(List.Item.name, List.Item)
 Vue.component(Progress.name, Progress)
 Vue.component(Card.name, Card)
+Vue.component(Icon.name, Icon)
+Vue.component(FormModel.name, FormModel)
+Vue.component(FormModel.Item.name, FormModel.Item)
+Vue.component(Input.name, Input)
 
 Vue.config.productionTip = false
 
+Vue.prototype.$message = message;
+Vue.prototype.$notification = notification;
+
+Vue.use(Modal);
 Vue.use(VueBus);
 let app = new Vue({
     render: h => h(App),

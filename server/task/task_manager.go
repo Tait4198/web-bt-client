@@ -6,6 +6,7 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 	"github.com/web-bt-client/db"
+	"github.com/web-bt-client/ws"
 	"log"
 	"strings"
 	"sync"
@@ -68,6 +69,9 @@ func (tm *Manager) createTask(t *torrent.Torrent, createTorrentInfo string, para
 	} else {
 		dbTask := db.Task{
 			InfoHash:          t.InfoHash().String(),
+			Complete:          false,
+			Pause:             false,
+			MetaInfo:          false,
 			DownloadPath:      param.DownloadPath,
 			Download:          param.Download,
 			DownloadFiles:     param.DownloadFiles,
@@ -82,6 +86,12 @@ func (tm *Manager) createTask(t *torrent.Torrent, createTorrentInfo string, para
 		if err := db.InsertTask(dbTask); err == nil {
 			task := newTask(t, tm, param)
 			tm.taskMap.Store(t.InfoHash().String(), task)
+
+			ws.GetWebSocketManager().Broadcast(TorrentDbTask{
+				Type: TorrentAdd,
+				Task: dbTask,
+			})
+
 			return task, nil
 		} else {
 			return nil, err
@@ -242,7 +252,7 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42070
+		cfg.ListenPort = 42069
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)

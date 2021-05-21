@@ -1,17 +1,17 @@
 <template>
   <div id="app">
-    <app-index></app-index>
+    <task-index></task-index>
   </div>
 </template>
 
 <script>
 
-import AppIndex from "@/components/AppIndex";
+import TaskIndex from "@/components/TaskIndex";
 
 export default {
   name: 'App',
   components: {
-    AppIndex
+    TaskIndex
   },
   data() {
     return {}

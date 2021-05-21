@@ -2,7 +2,10 @@
   <a-card class="item">
     <a-row>
       <a-col>
-        <span>{{ taskData.torrent_name + ' ' + taskData.info_hash }}</span>
+        <span class="name">{{ taskData.torrent_name }}</span>
+        <div class="file-size">
+          <span>{{ fileSize }}</span>
+        </div>
       </a-col>
       <a-col>
         <div class="progress">
@@ -11,19 +14,42 @@
       </a-col>
       <a-col :lg="12" :sm="24" :xs="24">
         <div class="status">
-          <a-space :size="20">
-            <span>{{ read.speed }} / {{ write.speed }}</span>
-            <span v-if="peers !== ''">Peers {{ peers }}</span>
+          <a-space :size="16">
+            <span>
+               <a-icon type="arrow-down"/>
+                {{ read.speed || '0 B' }}
+            </span>
+
+            <span>
+               <a-icon type="arrow-up"/>
+                {{ write.speed || '0 B' }}
+            </span>
+
+            <span v-if="!active">
+              Peers
+              {{ peers }}
+            </span>
           </a-space>
         </div>
       </a-col>
 
-      <a-col :lg="12" ::sm="24" :xs="24">
+      <a-col :lg="12" :sm="24" :xs="24">
         <div style="float: right">
           <a-space>
-            <a-button icon="pause">
+            <a-button icon="arrow-right"
+                      type="primary"
+                      :disabled="taskData.wait"
+                      @click="handleTaskStart"
+                      v-if="active">
+              开始
+            </a-button>
+            <a-button icon="pause"
+                      :disabled="taskData.wait"
+                      @click="handleTaskStop"
+                      v-else>
               暂停
             </a-button>
+
             <a-button icon="stock">
               详情
             </a-button>
@@ -83,10 +109,18 @@ export default {
           this.write.auto = this.write.last
         }
       }
-    }, 1000)
+    }, 2000)
   },
   destroyed() {
     clearInterval(this.speedTimer)
+  },
+  methods: {
+    handleTaskStart() {
+      this.$emit("task-start", this.taskData.info_hash)
+    },
+    handleTaskStop() {
+      this.$emit("task-stop", this.taskData.info_hash)
+    }
   },
   watch: {
     'taskData.stats.bytes_read_data'(val) {
@@ -109,6 +143,16 @@ export default {
     }
   },
   computed: {
+    active() {
+      return this.taskData && this.taskData.pause
+    },
+    fileSize() {
+      if (this.taskData.stats) {
+        return `${byteSize(this.taskData.stats.bytes_completed)} / ${byteSize(this.taskData.stats.length)}`
+      } else {
+        return `${byteSize(this.taskData.complete_file_length)} / ${byteSize(this.taskData.file_length)}`
+      }
+    },
     percent() {
       let p = 0
       if (this.taskData.stats) {
@@ -125,7 +169,7 @@ export default {
           return `${this.taskData.stats.active_peers} / ${this.taskData.stats.total_peers}`
         }
       }
-      return ""
+      return "0 / 0"
     }
   }
 }
@@ -133,15 +177,25 @@ export default {
 
 <style lang="less" scoped>
 .item {
-  margin: 0 12px;
+  margin: 0 16px;
 
   .progress {
-    padding-top: 12px;
-    padding-bottom: 12px
+    padding-top: 16px;
+    padding-bottom: 16px
   }
 
   .status {
     line-height: 16px
+  }
+
+  .name {
+    font-weight: bold;
+    font-size: 16px;
+  }
+
+  .file-size {
+    display: inline-block;
+    float: right;
   }
 }
 </style>
