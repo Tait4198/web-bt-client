@@ -84,6 +84,8 @@ func (tm *Manager) createTask(t *torrent.Torrent, createTorrentInfo string, para
 			dbTask.TorrentName = t.Info().Name
 		}
 		if err := db.InsertTask(dbTask); err == nil {
+			// 设置Torrent信息 磁力链接/种子文件
+			param.createTorrentInfo = createTorrentInfo
 			task := newTask(t, tm, param)
 			tm.taskMap.Store(t.InfoHash().String(), task)
 
@@ -236,7 +238,8 @@ func (tm *Manager) GetTasks() ([]db.Task, error) {
 			return []db.Task{}, err
 		}
 		for _, dbTask := range tasks {
-			if task, err := tm.getTask(dbTask.InfoHash); err == nil && task.torrent.BytesCompleted() > 0 {
+			if task, err := tm.getTask(dbTask.InfoHash); err == nil &&
+				task.torrent.BytesCompleted() > dbTask.CompleteFileLength {
 				dbTask.CompleteFileLength = task.torrent.BytesCompleted()
 			}
 		}
@@ -252,7 +255,7 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42069
+		cfg.ListenPort = 42073
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)

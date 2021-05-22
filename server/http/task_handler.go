@@ -3,7 +3,9 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/web-bt-client/task"
+	"github.com/web-bt-client/ws"
 	"net/http"
+	"strconv"
 )
 
 type UriTaskParam struct {
@@ -81,6 +83,21 @@ func taskList(c *gin.Context) {
 	}
 }
 
+func sentStatus(c *gin.Context) {
+	status := c.DefaultQuery("status", "1")
+	typeStr := c.DefaultQuery("type", "")
+	hash := c.DefaultQuery("hash", "")
+	typeInt, _ := strconv.ParseInt(typeStr, 10, 32)
+	statusBool := status == "1"
+	ws.GetWebSocketManager().Broadcast(task.TorrentTaskStatus{
+		TorrentBase: task.TorrentBase{
+			InfoHash: hash,
+			Type:     task.MessageType(typeInt),
+		},
+		Status: statusBool,
+	})
+}
+
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/new/uri", newUriTask)
 	groupRouter.POST("/new/file", newFileTask)
@@ -88,4 +105,5 @@ func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/start", startTask)
 	groupRouter.POST("/restart", restartTask)
 	groupRouter.GET("/list", taskList)
+	groupRouter.GET("/send", sentStatus)
 }

@@ -11,6 +11,8 @@ import {
     Modal,
     FormModel,
     Input,
+    Badge,
+    Spin,
     message,
     notification
 } from 'ant-design-vue'
@@ -30,6 +32,8 @@ Vue.component(Icon.name, Icon)
 Vue.component(FormModel.name, FormModel)
 Vue.component(FormModel.Item.name, FormModel.Item)
 Vue.component(Input.name, Input)
+Vue.component(Badge.name, Badge)
+Vue.component(Spin.name, Spin)
 
 Vue.config.productionTip = false
 

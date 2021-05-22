@@ -29,7 +29,6 @@ export default {
     TaskList
   },
   mounted() {
-
   },
   methods: {
     handleAddTask() {

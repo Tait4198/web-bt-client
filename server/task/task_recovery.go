@@ -49,16 +49,17 @@ func (tm *Manager) recoveryTask(dbTask *db.Task, mi *metainfo.MetaInfo) (*Torren
 	if t != nil {
 		infoHash := t.InfoHash().String()
 		// 恢复下载进度
-		if t.BytesCompleted() > 0 && t.BytesCompleted() != dbTask.CompleteFileLength {
+		if t.BytesCompleted() > dbTask.CompleteFileLength {
 			if err := db.UpdateTaskCompleteFileLength(t.BytesCompleted(), infoHash); err != nil {
 				return nil, fmt.Errorf("任务 %s 下载进度恢复失败", infoHash)
 			}
 		}
 		param := Param{
-			InfoHash:      infoHash,
-			Download:      dbTask.Download,
-			DownloadFiles: dbTask.DownloadFiles,
-			DownloadPath:  dbTask.DownloadPath,
+			InfoHash:          infoHash,
+			Download:          dbTask.Download,
+			DownloadFiles:     dbTask.DownloadFiles,
+			DownloadPath:      dbTask.DownloadPath,
+			createTorrentInfo: dbTask.CreateTorrentInfo,
 		}
 		task := newTask(t, tm, param)
 		tm.taskMap.Store(t.InfoHash().String(), task)

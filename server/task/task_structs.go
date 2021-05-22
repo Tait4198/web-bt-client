@@ -5,11 +5,12 @@ import "github.com/web-bt-client/db"
 type MessageType int
 
 const (
-	TorrentStats MessageType = 1000
-	TorrentInfo  MessageType = 1001
-	TorrentWait  MessageType = 1002
-	TorrentAdd   MessageType = 1003
-	TorrentPause MessageType = 1004
+	TorrentStats    MessageType = 1000
+	TorrentInfo     MessageType = 1001
+	TorrentWait     MessageType = 1002
+	TorrentAdd      MessageType = 1003
+	TorrentPause    MessageType = 1004
+	TorrentComplete MessageType = 1005
 )
 
 type TorrentBase struct {
@@ -70,6 +71,11 @@ type TorrentStatsWrapper struct {
 type TorrentTaskStatus struct {
 	TorrentBase
 	Status bool `json:"status"`
+}
+
+type TorrentTaskComplete struct {
+	TorrentTaskStatus
+	LastCompleteLength int64 `json:"last_complete_length"`
 }
 
 type TorrentDbTask struct {

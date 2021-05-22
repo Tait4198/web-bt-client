@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	"github.com/web-bt-client/db"
 	"github.com/web-bt-client/ws"
 	"log"
@@ -29,6 +30,8 @@ type Param struct {
 	Download bool `json:"download"`
 	// 恢复下载时参数是否更新
 	Update bool `json:"update"`
+
+	createTorrentInfo string
 }
 
 type infoStatus struct {
@@ -64,7 +67,6 @@ func (dt *TorrentTask) taskDownload() {
 			return
 		}
 	}
-
 	dt.download.run = true
 	go func() {
 		fMap := make(map[string]byte)
@@ -74,14 +76,15 @@ func (dt *TorrentTask) taskDownload() {
 		for _, f := range t.Files() {
 			if len(dt.param.DownloadFiles) == 0 {
 				f.Download()
+				dt.download.downloadLength += f.Length()
 			} else {
 				if _, ok := fMap[f.DisplayPath()]; ok && f.BytesCompleted() != f.Length() {
 					f.Download()
+					dt.download.downloadLength += f.Length()
 				} else {
 					f.SetPriority(torrent.PiecePriorityNone)
 				}
 			}
-			dt.download.downloadLength += f.Length()
 		}
 		log.Printf("Start Download %s %s \n", t.Name(), t.InfoHash().String())
 	}()
@@ -137,6 +140,16 @@ func (dt *TorrentTask) taskDownload() {
 					if err := db.TaskComplete(t.BytesCompleted(), t.InfoHash().String()); err != nil {
 						log.Printf("任务 %s 完成信息更新失败 %s \n", t.InfoHash().String(), err)
 					}
+					wsm.Broadcast(TorrentTaskComplete{
+						TorrentTaskStatus: TorrentTaskStatus{
+							TorrentBase: TorrentBase{
+								InfoHash: dt.param.InfoHash,
+								Type:     TorrentComplete,
+							},
+							Status: true,
+						},
+						LastCompleteLength: dt.torrent.BytesCompleted(),
+					})
 					break download
 				}
 			case <-dt.download.stop:
@@ -220,7 +233,6 @@ func (dt *TorrentTask) taskGetInfo() error {
 }
 
 func (dt *TorrentTask) Stop() error {
-
 	// 停止Task
 	if !dt.active {
 		return fmt.Errorf("任务 %s 已停止", dt.param.InfoHash)
@@ -244,12 +256,8 @@ func (dt *TorrentTask) Start(reloadTorrent bool) error {
 		return fmt.Errorf("任务 %s 已启动", dt.param.InfoHash)
 	}
 	if reloadTorrent {
-		dt.torrent.Drop()
-		mi := dt.torrent.Metainfo()
-		if nt, err := dt.manager.newMetaInfoTorrentWithPath(&mi, dt.param.DownloadPath); err == nil {
-			dt.torrent = nt
-		} else {
-			return fmt.Errorf("任务 %s 重新加载 Torrent 失败 %w", dt.torrent.InfoHash().String(), err)
+		if err := dt.reloadTorrent(); err != nil {
+			return err
 		}
 	}
 	if err := db.UpdateTaskPause(false, dt.param.InfoHash); err != nil {
@@ -270,9 +278,35 @@ func (dt *TorrentTask) taskExec() {
 	}
 }
 
+func (dt *TorrentTask) reloadTorrent() error {
+	dt.torrent.Drop()
+	var mi *metainfo.MetaInfo
+	infoHash := dt.torrent.InfoHash().String()
+	if dt.torrent.Info() == nil {
+		if m, err := db.SelectMetaInfo(infoHash); err == nil {
+			mi = m
+		} else {
+			if nt, err := dt.manager.newUriTorrentWithPath(dt.param.createTorrentInfo, dt.param.DownloadPath); err == nil {
+				dt.torrent = nt
+				return nil
+			} else {
+				return fmt.Errorf("任务 %s 重新加载 Torrent 失败 (磁力链接)%w", infoHash, err)
+			}
+		}
+	} else {
+		m := dt.torrent.Metainfo()
+		mi = &m
+	}
+	if nt, err := dt.manager.newMetaInfoTorrentWithPath(mi, dt.param.DownloadPath); err == nil {
+		dt.torrent = nt
+	} else {
+		return fmt.Errorf("任务 %s 重新加载 Torrent 失败 (MetaInfo)%w", infoHash, err)
+	}
+	return nil
+}
+
 func (dt *TorrentTask) TaskWait() error {
 	if !dt.wait {
-
 		dt.wait = true
 		dt.BroadcastTaskStatus(TorrentWait, dt.wait)
 

@@ -14,7 +14,7 @@
 <script>
 import {getTaskList, taskStart, taskStop} from "@/http/task";
 import TaskItem from "./TaskItem"
-import {TorrentInfo, TorrentStats, TorrentWait, TorrentAdd, TorrentPause} from "../constant/constant";
+import {TorrentInfo, TorrentStats, TorrentWait, TorrentAdd, TorrentPause, TorrentComplete} from "../constant/constant";
 
 export default {
   name: "TaskList",
@@ -27,6 +27,7 @@ export default {
     this.typFuncMap.set(TorrentWait, this.torrentWait)
     this.typFuncMap.set(TorrentAdd, this.torrentAdd)
     this.typFuncMap.set(TorrentPause, this.torrentPause)
+    this.typFuncMap.set(TorrentComplete, this.torrentComplete)
 
     getTaskList().then(res => {
       let {data = []} = res
@@ -64,9 +65,12 @@ export default {
     },
     torrentInfo(taskData, obj) {
       taskData.torrent_name = obj.name
+      taskData.file_length = obj.length
+      taskData.complete_file_length = 0
+      taskData.meta_info = true
       this.$notification.success({
         message: 'MetaInfo 获取完成',
-        description: `任务 ${taskData.torrent_name} 完成获取 MetaInfo`,
+        description: `任务 ${taskData.torrent_name} 完成信息获取`,
       })
     },
     torrentWait(taskData, obj) {
@@ -77,6 +81,13 @@ export default {
     },
     torrentPause(taskData, obj) {
       taskData.pause = obj.status
+    },
+    torrentComplete(taskData, obj) {
+      taskData.complete = obj.status
+      taskData.complete_file_length = obj.last_complete_length
+      if (taskData.stats) {
+        taskData.stats.bytes_completed = obj.last_complete_length
+      }
     },
 
     handleTaskStart(infoHash) {

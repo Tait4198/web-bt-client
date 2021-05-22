@@ -146,7 +146,8 @@ func UpdateTaskCompleteFileLength(completeFileLength int64, infoHash string) err
 }
 
 func TaskComplete(completeFileLength int64, infoHash string) error {
-	return ExecSql("update tasks set complete = ?, complete=1, download = 0, pause = 1, complete_time = ? where info_hash = ?",
+	return ExecSql("update tasks set complete_file_length = ?, complete=1, download = 0, pause = 1, complete_time = ?"+
+		" where info_hash = ?",
 		completeFileLength, time.Now().UnixNano(), infoHash)
 }
 

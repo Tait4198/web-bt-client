@@ -1,46 +1,54 @@
 <template>
   <a-card class="item">
     <a-row>
-      <a-col>
+      <a-col :lg="12" :sm="24" :xs="24">
+        <a-badge :status="taskStatus"/>
         <span class="name">{{ taskData.torrent_name }}</span>
-        <div class="file-size">
+      </a-col>
+      <a-col :lg="12" :sm="24" :xs="24">
+        <div class="file-size" v-if="taskData.file_length">
           <span>{{ fileSize }}</span>
         </div>
       </a-col>
-      <a-col>
-        <div class="progress">
+      <a-col class="progress">
+        <div>
           <a-progress :percent="percent" :strokeWidth="8"/>
         </div>
       </a-col>
-      <a-col :lg="12" :sm="24" :xs="24">
-        <div class="status">
-          <a-space :size="16">
-            <span>
-               <a-icon type="arrow-down"/>
-                {{ read.speed || '0 B' }}
-            </span>
+      <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
+        <div class="status" v-if="active">
+          <div class="get-info-status" v-if="!taskData.meta_info">
+            <a-spin>
+              <a-icon slot="indicator" type="loading" style="font-size: 16px" spin/>
+            </a-spin>
+            <span style="margin-left: 8px">正在获取信息</span>
+          </div>
 
+          <a-space :size="16" v-else>
             <span>
-               <a-icon type="arrow-up"/>
-                {{ write.speed || '0 B' }}
+             <a-icon type="arrow-down"/> {{ read.speed || '0 B' }}
             </span>
-
-            <span v-if="!active">
-              Peers
-              {{ peers }}
+            <span>
+             <a-icon type="arrow-up"/> {{ write.speed || '0 B' }}
+            </span>
+            <span>
+              Peers {{ peers }}
+            </span>
+            <span v-if="remainingTime">
+              {{ remainingTime }}
             </span>
           </a-space>
         </div>
       </a-col>
 
-      <a-col :lg="12" :sm="24" :xs="24">
+      <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
         <div style="float: right">
           <a-space>
             <a-button icon="arrow-right"
                       type="primary"
                       :disabled="taskData.wait"
                       @click="handleTaskStart"
-                      v-if="active">
+                      v-if="!active">
               开始
             </a-button>
             <a-button icon="pause"
@@ -86,6 +94,7 @@ export default {
         auto: 0,
         speed: '0 B'
       },
+      remainingTime: '',
       speedTimer: null
     }
   },
@@ -96,6 +105,7 @@ export default {
           this.read.last = 0
           this.read.auto = 0
           this.read.speed = '0 B'
+          this.remainingTime = ''
         } else {
           this.read.auto = this.read.last
         }
@@ -116,10 +126,36 @@ export default {
   },
   methods: {
     handleTaskStart() {
+      this.remainingTime = ''
+
       this.$emit("task-start", this.taskData.info_hash)
     },
     handleTaskStop() {
       this.$emit("task-stop", this.taskData.info_hash)
+    },
+    calcTime(s) {
+      let day = Math.floor(s / (24 * 3600))
+      let hour = Math.floor((s - day * 24 * 3600) / 3600)
+      let minute = Math.floor((s - day * 24 * 3600 - hour * 3600) / 60)
+      let second = s - day * 24 * 3600 - hour * 3600 - minute * 60
+      let time = []
+      if (day) {
+        time.push(`${day} 天`)
+      }
+      if (hour) {
+        time.push(`${hour} 时`)
+      }
+      if (minute) {
+        time.push(`${minute} 分`)
+      }
+      if (second) {
+        time.push(`${second} 秒`)
+      }
+      if (time.length > 0) {
+        return time.join(' ')
+      } else {
+        return ''
+      }
     }
   },
   watch: {
@@ -128,6 +164,9 @@ export default {
         this.read.last = val
         this.read.speed = byteSize(0)
       } else {
+        let sec = (this.taskData.stats.length - this.taskData.stats.bytes_completed) / (val - this.read.last)
+        this.remainingTime = sec ? this.calcTime(Math.ceil(sec)) : ''
+
         this.read.speed = byteSize(val - this.read.last)
         this.read.last = val
       }
@@ -143,8 +182,16 @@ export default {
     }
   },
   computed: {
+    taskStatus() {
+      if (this.taskData.complete) {
+        return 'success'
+      } else if (this.active) {
+        return 'processing'
+      }
+      return 'default'
+    },
     active() {
-      return this.taskData && this.taskData.pause
+      return !this.taskData.complete && (this.taskData && !this.taskData.pause)
     },
     fileSize() {
       if (this.taskData.stats) {
@@ -180,12 +227,15 @@ export default {
   margin: 0 16px;
 
   .progress {
-    padding-top: 16px;
-    padding-bottom: 16px
+    padding-top: 36px;
   }
 
   .status {
-    line-height: 16px
+    line-height: 24px;
+  }
+
+  .get-info-status {
+    display: inline-block;
   }
 
   .name {
@@ -196,6 +246,10 @@ export default {
   .file-size {
     display: inline-block;
     float: right;
+  }
+
+  .item-bottom {
+    margin-top: 18px;
   }
 }
 </style>
