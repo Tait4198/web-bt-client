@@ -8,7 +8,7 @@ func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) To
 	torrentStatsWrapper := TorrentStatsWrapper{
 		TorrentBase: TorrentBase{
 			InfoHash: dt.torrent.InfoHash().String(),
-			Type:     TorrentStats,
+			Type:     Stats,
 		},
 		TorrentDownload: TorrentDownload{
 			Length:         dt.torrent.Length(),
@@ -60,7 +60,7 @@ func (dt *TorrentTask) GetTorrentInfo(includeFile bool) (TorrentInfoWrapper, err
 	torrentInfoWrapper := TorrentInfoWrapper{
 		TorrentBase: TorrentBase{
 			InfoHash: dt.torrent.InfoHash().String(),
-			Type:     TorrentInfo,
+			Type:     Info,
 		},
 		TorrentDownload: TorrentDownload{
 			Length:         dt.torrent.Length(),

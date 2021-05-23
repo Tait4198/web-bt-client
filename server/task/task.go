@@ -21,19 +21,6 @@ type TorrentTask struct {
 	wait     bool
 }
 
-type Param struct {
-	InfoHash      string   `json:"info_hash"`
-	DownloadPath  string   `json:"download_path"`
-	DownloadFiles []string `json:"download_files"`
-
-	// 是否下载文件
-	Download bool `json:"download"`
-	// 恢复下载时参数是否更新
-	Update bool `json:"update"`
-
-	createTorrentInfo string
-}
-
 type infoStatus struct {
 	stop chan struct{}
 	run  bool
@@ -144,7 +131,7 @@ func (dt *TorrentTask) taskDownload() {
 						TorrentTaskStatus: TorrentTaskStatus{
 							TorrentBase: TorrentBase{
 								InfoHash: dt.param.InfoHash,
-								Type:     TorrentComplete,
+								Type:     Complete,
 							},
 							Status: true,
 						},
@@ -232,7 +219,7 @@ func (dt *TorrentTask) taskGetInfo() error {
 	return nil
 }
 
-func (dt *TorrentTask) Stop() error {
+func (dt *TorrentTask) stop() error {
 	// 停止Task
 	if !dt.active {
 		return fmt.Errorf("任务 %s 已停止", dt.param.InfoHash)
@@ -251,7 +238,7 @@ func (dt *TorrentTask) Stop() error {
 	return nil
 }
 
-func (dt *TorrentTask) Start(reloadTorrent bool) error {
+func (dt *TorrentTask) ready(reloadTorrent bool) error {
 	if dt.active {
 		return fmt.Errorf("任务 %s 已启动", dt.param.InfoHash)
 	}
@@ -264,17 +251,16 @@ func (dt *TorrentTask) Start(reloadTorrent bool) error {
 		return fmt.Errorf("任务 %s 启动失败 %w", dt.torrent.InfoHash().String(), err)
 	}
 	dt.active = true
-	go dt.taskExec()
 	return nil
 }
 
-func (dt *TorrentTask) taskExec() {
+func (dt *TorrentTask) exec() {
 	if err := dt.taskGetInfo(); err == nil && dt.param.Download {
 		dt.taskDownload()
 	}
 	dt.active = false
 	if err := db.UpdateTaskPause(true, dt.torrent.InfoHash().String()); err == nil {
-		dt.BroadcastTaskStatus(TorrentPause, true)
+		BroadcastTaskStatus(dt, Pause, true)
 	}
 }
 
@@ -308,28 +294,18 @@ func (dt *TorrentTask) reloadTorrent() error {
 func (dt *TorrentTask) TaskWait() error {
 	if !dt.wait {
 		dt.wait = true
-		dt.BroadcastTaskStatus(TorrentWait, dt.wait)
+		BroadcastTaskStatus(dt, Wait, dt.wait)
 
 		go func() {
 			tick := time.Tick(time.Second * 3)
 			<-tick
 
 			dt.wait = false
-			dt.BroadcastTaskStatus(TorrentWait, dt.wait)
+			BroadcastTaskStatus(dt, Wait, dt.wait)
 		}()
 		return nil
 	}
 	return fmt.Errorf("任务 %s 等待中", dt.torrent.InfoHash().String())
-}
-
-func (dt *TorrentTask) BroadcastTaskStatus(messageType MessageType, status bool) {
-	ws.GetWebSocketManager().Broadcast(TorrentTaskStatus{
-		TorrentBase: TorrentBase{
-			InfoHash: dt.torrent.InfoHash().String(),
-			Type:     messageType,
-		},
-		Status: status,
-	})
 }
 
 func newTask(t *torrent.Torrent, tm *Manager, param Param) *TorrentTask {

@@ -30,5 +30,8 @@ func Router() http.Handler {
 	InitTorrentRouter(torrentRouter)
 	wsRouter := router.Group("ws")
 	InitWsRouter(wsRouter)
+
+	baseRouter := router.Group("base")
+	InitBaseRouter(baseRouter)
 	return router
 }

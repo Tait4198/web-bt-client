@@ -17,11 +17,16 @@
       </a-col>
       <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
         <div class="status" v-if="active">
-          <div class="get-info-status" v-if="!taskData.meta_info">
+          <div class="icon-status" v-if="taskData.queue">
+            <a-icon type="hourglass"/>
+            <span>正在队列等待</span>
+          </div>
+
+          <div class="icon-status" v-else-if="!taskData.meta_info">
             <a-spin>
               <a-icon slot="indicator" type="loading" style="font-size: 16px" spin/>
             </a-spin>
-            <span style="margin-left: 8px">正在获取信息</span>
+            <span>正在获取信息</span>
           </div>
 
           <a-space :size="16" v-else>
@@ -185,6 +190,8 @@ export default {
     taskStatus() {
       if (this.taskData.complete) {
         return 'success'
+      } else if (this.taskData.queue) {
+        return 'warning'
       } else if (this.active) {
         return 'processing'
       }
@@ -228,14 +235,19 @@ export default {
 
   .progress {
     padding-top: 36px;
+    padding-right: 24px;
   }
 
   .status {
     line-height: 24px;
   }
 
-  .get-info-status {
+  .icon-status {
     display: inline-block;
+
+    span {
+      margin-left: 8px;
+    }
   }
 
   .name {

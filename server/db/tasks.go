@@ -40,7 +40,7 @@ func SelectTaskCount(infoHash string) int {
 }
 
 func SelectActiveTaskList() ([]Task, error) {
-	return SelectTaskListBase("select * from tasks where pause = 0")
+	return SelectTaskListBase("select * from tasks where pause = 0 order by create_time asc")
 }
 
 func SelectTaskList() ([]Task, error) {
@@ -111,7 +111,6 @@ func InsertTask(task Task) error {
 }
 
 func UpdateTaskMetaInfo(infoHash, torrentName string, fileLength int64) error {
-	// todo 增加WS推送
 	return ExecSql("update tasks set torrent_name = ?,file_length = ?,meta_info = 1 where info_hash = ?",
 		torrentName, fileLength, infoHash)
 }

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <a-list item-layout="vertical" :split="false" :data-source="taskList">
+    <a-list item-layout="vertical" :split="false" :data-source="taskList" :loading="taskListLoading">
       <a-list-item slot="renderItem" :key="index" slot-scope="item, index">
         <task-item :task-data="item"
                    @task-start="handleTaskStart"
@@ -14,7 +14,15 @@
 <script>
 import {getTaskList, taskStart, taskStop} from "@/http/task";
 import TaskItem from "./TaskItem"
-import {TorrentInfo, TorrentStats, TorrentWait, TorrentAdd, TorrentPause, TorrentComplete} from "../constant/constant";
+import {
+  TaskInfo,
+  TaskStats,
+  TaskWait,
+  TaskAdd,
+  TaskPause,
+  TaskComplete,
+  TaskQueueStatus,
+} from "../constant/constant";
 
 export default {
   name: "TaskList",
@@ -22,12 +30,13 @@ export default {
     TaskItem
   },
   mounted() {
-    this.typFuncMap.set(TorrentStats, this.torrentStats)
-    this.typFuncMap.set(TorrentInfo, this.torrentInfo)
-    this.typFuncMap.set(TorrentWait, this.torrentWait)
-    this.typFuncMap.set(TorrentAdd, this.torrentAdd)
-    this.typFuncMap.set(TorrentPause, this.torrentPause)
-    this.typFuncMap.set(TorrentComplete, this.torrentComplete)
+    this.typFuncMap.set(TaskStats, this.taskStats)
+    this.typFuncMap.set(TaskInfo, this.taskInfo)
+    this.typFuncMap.set(TaskWait, this.taskWait)
+    this.typFuncMap.set(TaskAdd, this.taskAdd)
+    this.typFuncMap.set(TaskPause, this.taskPause)
+    this.typFuncMap.set(TaskComplete, this.taskComplete)
+    this.typFuncMap.set(TaskQueueStatus, this.taskQueueStatus)
 
     getTaskList().then(res => {
       let {data = []} = res
@@ -35,6 +44,7 @@ export default {
         let item = data[i]
         this.$set(this.tasks, item.info_hash, this.newTask(item))
       }
+      this.taskListLoading = false
     })
 
     this.$bus.on("ws-message", (e) => {
@@ -60,10 +70,10 @@ export default {
     }
   },
   methods: {
-    torrentStats(taskData, obj) {
+    taskStats(taskData, obj) {
       this.$set(taskData, 'stats', obj)
     },
-    torrentInfo(taskData, obj) {
+    taskInfo(taskData, obj) {
       taskData.torrent_name = obj.name
       taskData.file_length = obj.length
       taskData.complete_file_length = 0
@@ -73,21 +83,24 @@ export default {
         description: `任务 ${taskData.torrent_name} 完成信息获取`,
       })
     },
-    torrentWait(taskData, obj) {
+    taskWait(taskData, obj) {
       taskData.wait = obj.status
     },
-    torrentAdd(obj) {
+    taskAdd(obj) {
       this.$set(this.tasks, obj.info_hash, this.newTask(obj))
     },
-    torrentPause(taskData, obj) {
+    taskPause(taskData, obj) {
       taskData.pause = obj.status
     },
-    torrentComplete(taskData, obj) {
+    taskComplete(taskData, obj) {
       taskData.complete = obj.status
       taskData.complete_file_length = obj.last_complete_length
       if (taskData.stats) {
         taskData.stats.bytes_completed = obj.last_complete_length
       }
+    },
+    taskQueueStatus(taskData, obj) {
+      taskData.queue = obj.status
     },
 
     handleTaskStart(infoHash) {
@@ -126,7 +139,12 @@ export default {
     },
 
     newTask(item) {
-      item.wait = false
+      if (!item.wait) {
+        item.wait = false
+      }
+      if (!item.queue) {
+        item.queue = false
+      }
       return item
     }
   },
@@ -134,6 +152,7 @@ export default {
     return {
       tasks: [],
       typFuncMap: new Map(),
+      taskListLoading: true
     }
   }
 }

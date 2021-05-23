@@ -14,8 +14,9 @@ import (
 )
 
 type Manager struct {
-	client  *torrent.Client
-	taskMap *Map
+	client    *torrent.Client
+	taskMap   *Map
+	execQueue *ExecQueue
 }
 
 func (tm *Manager) taskExists(infoHash string) bool {
@@ -90,8 +91,10 @@ func (tm *Manager) createTask(t *torrent.Torrent, createTorrentInfo string, para
 			tm.taskMap.Store(t.InfoHash().String(), task)
 
 			ws.GetWebSocketManager().Broadcast(TorrentDbTask{
-				Type: TorrentAdd,
-				Task: dbTask,
+				Type:  Add,
+				Wait:  false,
+				Queue: false,
+				Task:  dbTask,
 			})
 
 			return task, nil
@@ -114,10 +117,16 @@ func (tm *Manager) getTask(infoHash string) (*TorrentTask, error) {
 	return task, nil
 }
 
-func (tm *Manager) run(task *TorrentTask, reloadTorrent bool) error {
-	if err := task.Start(reloadTorrent); err != nil {
+func (tm *Manager) addToQueue(task *TorrentTask, reloadTorrent bool) error {
+	infoHash := task.param.InfoHash
+	if _, index := tm.execQueue.find(infoHash); index != -1 {
+		return fmt.Errorf("任务 %s 已在队列中", infoHash)
+	}
+	if err := task.ready(reloadTorrent); err != nil {
 		return err
 	}
+	tm.execQueue.pushBack(task)
+	BroadcastTaskStatus(task, QueueStatus, true)
 	return nil
 }
 
@@ -145,7 +154,7 @@ func (tm *Manager) AddUriTask(uri string, param Param) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := tm.run(task, false); err != nil {
+	if err := tm.addToQueue(task, false); err != nil {
 		return "", err
 	}
 	return infoHash, nil
@@ -177,7 +186,7 @@ func (tm *Manager) Start(param Param, wait bool) error {
 				}
 			}
 		}
-		return tm.run(task, true)
+		return tm.addToQueue(task, true)
 	}
 	return fmt.Errorf("任务 %s 不存在", param.InfoHash)
 }
@@ -192,9 +201,13 @@ func (tm *Manager) Stop(infoHash string, wait bool) error {
 			return err
 		}
 	}
-	if err := task.Stop(); err != nil {
+	if err := task.stop(); err != nil {
 		return err
 	}
+
+	// Queue Remove
+	tm.execQueue.remove(task.param.InfoHash)
+
 	return nil
 }
 
@@ -230,18 +243,33 @@ func (tm *Manager) GetTorrentInfo(infoHash string) (TorrentInfoWrapper, error) {
 	return TorrentInfoWrapper{}, fmt.Errorf("未找到 %s 信息", infoHash)
 }
 
-func (tm *Manager) GetTasks() ([]db.Task, error) {
-	if tasks, err := db.SelectTaskList(); err != nil {
-		return db.SelectTaskList()
+func (tm *Manager) GetTasks() ([]TorrentDbTask, error) {
+	if dbTasks, err := db.SelectTaskList(); err != nil {
+		return nil, err
 	} else {
-		if tasks == nil {
-			return []db.Task{}, err
+		if dbTasks == nil {
+			return nil, err
 		}
-		for _, dbTask := range tasks {
+		var tasks []TorrentDbTask
+		for _, dbTask := range dbTasks {
 			if task, err := tm.getTask(dbTask.InfoHash); err == nil &&
 				task.torrent.BytesCompleted() > dbTask.CompleteFileLength {
 				dbTask.CompleteFileLength = task.torrent.BytesCompleted()
 			}
+			tdTask := TorrentDbTask{
+				Task: dbTask,
+			}
+			// 是否等待状态
+			if task, err := tm.getTask(dbTask.InfoHash); err == nil {
+				tdTask.Wait = task.wait
+			}
+			// 是否在队列
+			if _, index := tm.execQueue.find(dbTask.InfoHash); index > 0 {
+				tdTask.Queue = true
+			} else {
+				tdTask.Queue = false
+			}
+			tasks = append(tasks, tdTask)
 		}
 		return tasks, err
 	}
@@ -255,14 +283,15 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42073
+		cfg.ListenPort = 42077
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		taskManager = &Manager{
-			client:  client,
-			taskMap: NewTaskMap(),
+			client:    client,
+			taskMap:   NewTaskMap(),
+			execQueue: NewExecQueue(1),
 		}
 	})
 	return taskManager
@@ -284,7 +313,7 @@ func InitTaskManager() {
 			for _, dbTask := range dbTasks {
 				mi := miMap[dbTask.InfoHash]
 				if task, err := tm.recoveryTask(&dbTask, mi); err == nil {
-					if err := tm.run(task, false); err == nil {
+					if err := tm.addToQueue(task, false); err == nil {
 						log.Printf("任务 %s 恢复成功 \n", dbTask.InfoHash)
 					} else {
 						log.Println(err)

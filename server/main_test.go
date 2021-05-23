@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 	"github.com/anacrolix/torrent"
 	"testing"
@@ -32,4 +33,17 @@ func TestTick(t *testing.T) {
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
 	<-timeTickerChan
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
+}
+
+func TestList(t *testing.T) {
+	//q := task.NewExecQueue(1)
+	//q.PushBack("Ni")
+	//q.PushBack("Hao")
+	//q.PushBack("A")
+	//
+	//forever := make(chan bool)
+	//<-forever
+
+	l := list.New()
+	fmt.Println(l.Front())
 }

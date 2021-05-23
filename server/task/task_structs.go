@@ -5,13 +5,27 @@ import "github.com/web-bt-client/db"
 type MessageType int
 
 const (
-	TorrentStats    MessageType = 1000
-	TorrentInfo     MessageType = 1001
-	TorrentWait     MessageType = 1002
-	TorrentAdd      MessageType = 1003
-	TorrentPause    MessageType = 1004
-	TorrentComplete MessageType = 1005
+	Stats       MessageType = 1000
+	Info        MessageType = 1001
+	Wait        MessageType = 1002
+	Add         MessageType = 1003
+	Pause       MessageType = 1004
+	Complete    MessageType = 1005
+	QueueStatus MessageType = 1006
 )
+
+type Param struct {
+	InfoHash      string   `json:"info_hash"`
+	DownloadPath  string   `json:"download_path"`
+	DownloadFiles []string `json:"download_files"`
+
+	// 是否下载文件
+	Download bool `json:"download"`
+	// 恢复下载时参数是否更新
+	Update bool `json:"update"`
+
+	createTorrentInfo string
+}
 
 type TorrentBase struct {
 	InfoHash string      `json:"info_hash"`
@@ -79,6 +93,8 @@ type TorrentTaskComplete struct {
 }
 
 type TorrentDbTask struct {
-	Type MessageType `json:"type"`
+	Type  MessageType `json:"type"`
+	Wait  bool        `json:"wait"`
+	Queue bool        `json:"queue"`
 	db.Task
 }
