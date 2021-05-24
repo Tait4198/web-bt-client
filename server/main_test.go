@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/anacrolix/torrent"
+	"github.com/shirou/gopsutil/v3/disk"
 	"testing"
 	"time"
 )
@@ -46,4 +47,19 @@ func TestList(t *testing.T) {
 
 	l := list.New()
 	fmt.Println(l.Front())
+}
+
+func TestGetDrives(t *testing.T) {
+	partitions, _ := disk.Partitions(false)
+	for _, partition := range partitions {
+		fmt.Println(partition.Mountpoint)
+	}
+
+	us, err := disk.Usage("C:\\Windows")
+	if err == nil {
+		fmt.Println(us.Free)
+		fmt.Println(us.Total)
+	} else {
+		fmt.Println(err)
+	}
 }
