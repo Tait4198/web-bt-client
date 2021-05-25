@@ -13,6 +13,7 @@ import {
     Input,
     Badge,
     Spin,
+    Tree,
     message,
     notification
 } from 'ant-design-vue'
@@ -34,6 +35,7 @@ Vue.component(FormModel.Item.name, FormModel.Item)
 Vue.component(Input.name, Input)
 Vue.component(Badge.name, Badge)
 Vue.component(Spin.name, Spin)
+Vue.component(Tree.DirectoryTree.name, Tree.DirectoryTree)
 
 Vue.config.productionTip = false
 

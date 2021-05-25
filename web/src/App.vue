@@ -11,7 +11,7 @@ import TaskIndex from "@/components/TaskIndex";
 export default {
   name: 'App',
   components: {
-    TaskIndex
+    TaskIndex,
   },
   data() {
     return {}

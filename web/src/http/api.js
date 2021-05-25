@@ -13,3 +13,11 @@ export const taskStart = (params) => POST('/task/start', params, {
 export const taskStop = (params) => GET('/task/stop', params, {
     baseURL
 })
+
+export const getPath = (params) => GET('/base/path', params, {
+    baseURL
+})
+
+export const getSpace = (params) => GET('/base/space', params, {
+    baseURL
+})

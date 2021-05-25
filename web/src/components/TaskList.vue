@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import {getTaskList, taskStart, taskStop} from "@/http/task";
+import {getTaskList, taskStart, taskStop} from "@/http/api";
 import TaskItem from "./TaskItem"
 import {
   TaskInfo,

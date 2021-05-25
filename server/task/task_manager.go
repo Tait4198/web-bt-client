@@ -283,7 +283,7 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42077
+		cfg.ListenPort = 42069
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
