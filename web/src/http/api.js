@@ -21,3 +21,7 @@ export const getPath = (params) => GET('/base/path', params, {
 export const getSpace = (params) => GET('/base/space', params, {
     baseURL
 })
+
+export const getTorrentInfo = (params) => GET('/torrent/info', params, {
+    baseURL
+})

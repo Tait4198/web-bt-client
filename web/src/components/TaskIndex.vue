@@ -65,6 +65,8 @@ export default {
     },
     addTaskCancel() {
       this.mgTask.form.uri = ''
+      this.mgTask.form.path = ''
+      this.mgTask.form.pathFreeSpace = ''
     },
     addTaskOk() {
 
@@ -72,8 +74,7 @@ export default {
     selectPathOk() {
       this.mgTask.form.path = this.pathSelect.tempPath
       this.pathSelect.visible = false
-      console.log(this.$refs.mgTaskPath)
-      this.$refs.mgTaskPath.onFieldChange()
+      this.$refs.mgTaskPath.onFieldBlur()
     },
     handlePathSelect(path) {
       this.pathSelect.tempPath = path
@@ -130,7 +131,7 @@ export default {
         },
         rules: {
           uri: [{validator: validateUri, trigger: 'change'}],
-          path: [{validator: validatePath, trigger: 'change'}],
+          path: [{validator: validatePath, trigger: 'blur'}],
         }
       },
     }

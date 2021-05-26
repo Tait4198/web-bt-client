@@ -1,6 +1,9 @@
 package task
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/anacrolix/torrent"
+)
 
 func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) TorrentStatsWrapper {
 	torrentStats := dt.torrent.Stats()
@@ -53,19 +56,26 @@ func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) To
 }
 
 func (dt *TorrentTask) GetTorrentInfo(includeFile bool) (TorrentInfoWrapper, error) {
-	t := dt.torrent
+	if tiw, err := GetTorrentInfo(dt.torrent, includeFile); err == nil {
+		tiw.TorrentDownload = TorrentDownload{
+			Length:         dt.torrent.Length(),
+			DownloadLength: dt.download.downloadLength,
+			BytesCompleted: dt.torrent.BytesCompleted(),
+		}
+		return tiw, nil
+	} else {
+		return TorrentInfoWrapper{}, err
+	}
+}
+
+func GetTorrentInfo(t *torrent.Torrent, includeFile bool) (TorrentInfoWrapper, error) {
 	if t.Info() == nil {
 		return TorrentInfoWrapper{}, fmt.Errorf(" %s 未获取 MateInfo", t.InfoHash().String())
 	}
 	torrentInfoWrapper := TorrentInfoWrapper{
 		TorrentBase: TorrentBase{
-			InfoHash: dt.torrent.InfoHash().String(),
+			InfoHash: t.InfoHash().String(),
 			Type:     Info,
-		},
-		TorrentDownload: TorrentDownload{
-			Length:         dt.torrent.Length(),
-			DownloadLength: dt.download.downloadLength,
-			BytesCompleted: dt.torrent.BytesCompleted(),
 		},
 		Name: t.Name(),
 	}

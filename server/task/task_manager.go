@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 	"github.com/web-bt-client/db"
@@ -275,6 +276,24 @@ func (tm *Manager) GetTasks() ([]TorrentDbTask, error) {
 	}
 }
 
+func (tm *Manager) SaveTorrent(mi *metainfo.MetaInfo) (TorrentInfoWrapper, error) {
+	if t, err := tm.client.AddTorrent(mi); err == nil {
+		infoHash := t.InfoHash().String()
+		if db.SelectTorrentDataCount(infoHash) == 0 {
+			if b, err := bencode.Marshal(t.Metainfo()); err == nil {
+				if err := db.InsertTorrentData(infoHash, b); err != nil {
+					return TorrentInfoWrapper{}, fmt.Errorf("Torrent %s 写入 SQLite 失败 %w \n", infoHash, err)
+				}
+			} else {
+				return TorrentInfoWrapper{}, fmt.Errorf("bencode.Marshal 失败 %w \n", err)
+			}
+		}
+		return GetTorrentInfo(t, true)
+	} else {
+		return TorrentInfoWrapper{}, fmt.Errorf("无效 MetaInfo %s", err)
+	}
+}
+
 var taskManager *Manager
 var tmOnce sync.Once
 
@@ -283,7 +302,7 @@ func GetTaskManager() *Manager {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42069
+		cfg.ListenPort = 42068
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
