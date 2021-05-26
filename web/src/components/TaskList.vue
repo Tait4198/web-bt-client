@@ -39,10 +39,12 @@ export default {
     this.typFuncMap.set(TaskQueueStatus, this.taskQueueStatus)
 
     getTaskList().then(res => {
-      let {data = []} = res
-      for (let i = 0; i < data.length; i++) {
-        let item = data[i]
-        this.$set(this.tasks, item.info_hash, this.newTask(item))
+      let {data} = res
+      if (data) {
+        for (let i = 0; i < data.length; i++) {
+          let item = data[i]
+          this.$set(this.tasks, item.info_hash, this.newTask(item))
+        }
       }
       this.taskListLoading = false
     })
