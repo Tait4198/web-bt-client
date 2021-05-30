@@ -6,11 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/web-bt-client/task"
 	"net/http"
+	"strings"
 )
 
 func torrentInfo(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
-	torrentInfo, err := task.GetTaskManager().GetTorrentInfo(hash)
+	torrentInfo, err := task.GetTaskManager().GetTorrentInfo(strings.ToLower(hash))
 	if err == nil {
 		c.JSON(http.StatusOK, DataJson(true, torrentInfo))
 	} else {

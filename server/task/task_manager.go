@@ -9,7 +9,6 @@ import (
 	"github.com/web-bt-client/db"
 	"github.com/web-bt-client/ws"
 	"log"
-	"strings"
 	"sync"
 	"time"
 )
@@ -20,7 +19,7 @@ type Manager struct {
 	execQueue *ExecQueue
 }
 
-func (tm *Manager) taskExists(infoHash string) bool {
+func (tm *Manager) TaskExists(infoHash string) bool {
 	if tm.taskMap.HasMember(infoHash) {
 		return true
 	}
@@ -65,32 +64,33 @@ func (tm *Manager) newUriTorrentWithPath(uri string, path string) (*torrent.Torr
 	}
 }
 
-func (tm *Manager) createTask(t *torrent.Torrent, createTorrentInfo string, param Param) (*TorrentTask, error) {
-	if tm.taskExists(t.InfoHash().String()) {
-		return nil, fmt.Errorf("任务已存在 %s", t.InfoHash().String())
+func (tm *Manager) createTask(t *torrent.Torrent, param Param) (*TorrentTask, error) {
+	if tm.TaskExists(t.InfoHash().String()) {
+		return nil, fmt.Errorf("任务 %s 已存在", t.InfoHash().String())
 	} else {
 		dbTask := db.Task{
 			InfoHash:          t.InfoHash().String(),
 			Complete:          false,
 			Pause:             false,
-			MetaInfo:          false,
+			MetaInfo:          t.Info() != nil,
 			DownloadPath:      param.DownloadPath,
 			Download:          param.Download,
+			DownloadAll:       param.DownloadAll,
 			DownloadFiles:     param.DownloadFiles,
 			CreateTime:        time.Now().UnixNano(),
-			CreateTorrentInfo: createTorrentInfo,
+			CreateTorrentInfo: param.CreateTorrentInfo,
 		}
 		if t.Info() == nil {
 			dbTask.TorrentName = t.InfoHash().String()
 		} else {
 			dbTask.TorrentName = t.Info().Name
+			dbTask.FileLength = GetTorrentLength(t)
+			dbTask.CompleteFileLength = t.BytesCompleted()
 		}
 		if err := db.InsertTask(dbTask); err == nil {
 			// 设置Torrent信息 磁力链接/种子文件
-			param.createTorrentInfo = createTorrentInfo
 			task := newTask(t, tm, param)
 			tm.taskMap.Store(t.InfoHash().String(), task)
-
 			ws.GetWebSocketManager().Broadcast(TorrentDbTask{
 				Type:  Add,
 				Wait:  false,
@@ -131,27 +131,62 @@ func (tm *Manager) addToQueue(task *TorrentTask, reloadTorrent bool) error {
 	return nil
 }
 
-func (tm *Manager) AddUriTask(uri string, param Param) (string, error) {
-	t, err := tm.client.AddMagnet(uri)
+func (tm *Manager) CreateTask(param Param) (string, error) {
+	if param.TaskType == UriType {
+		return tm.createUriTask(param)
+	} else if param.TaskType == FileType {
+		return tm.createFileTask(param)
+	}
+	return "", fmt.Errorf("无效任务类型 %s", param.TaskType)
+}
+
+func (tm *Manager) createUriTask(param Param) (string, error) {
+	t, err := tm.client.AddMagnet(param.CreateTorrentInfo)
 	if err != nil {
 		return "", fmt.Errorf("无效磁力链接")
 	}
 	infoHash := t.InfoHash().String()
-	if tm.taskMap.Load(infoHash) != nil || db.SelectTaskCount(infoHash) > 0 {
+	if tm.TaskExists(infoHash) {
 		return "", fmt.Errorf("任务 %s 已存在", t.InfoHash().String())
 	}
+	// 无论哪种创建Info都是为空
 	if param.DownloadPath != "" {
 		t.Drop()
-		t, err = tm.newUriTorrentWithPath(uri, param.DownloadPath)
+		t, err = tm.newUriTorrentWithPath(param.CreateTorrentInfo, param.DownloadPath)
 	} else {
-		t, err = tm.client.AddMagnet(uri)
+		t, err = tm.client.AddMagnet(param.CreateTorrentInfo)
 	}
 	if err != nil {
 		return "", err
 	}
 	// 设置InfoHash
 	param.InfoHash = infoHash
-	task, err := tm.createTask(t, strings.ToLower(uri), param)
+	task, err := tm.createTask(t, param)
+	if err != nil {
+		return "", err
+	}
+	if err := tm.addToQueue(task, false); err != nil {
+		return "", err
+	}
+	return infoHash, nil
+}
+
+func (tm *Manager) createFileTask(param Param) (string, error) {
+	// 种子文件创建 CreateTorrentInfo 为 InfoHash
+	infoHash := param.CreateTorrentInfo
+	if tm.TaskExists(infoHash) {
+		return "", fmt.Errorf("任务 %s 已存在", infoHash)
+	}
+	mi, err := db.SelectMetaInfo(infoHash)
+	if err != nil {
+		return "", fmt.Errorf("未查询到 %s 种子信息", infoHash)
+	}
+	t, err := tm.newMetaInfoTorrentWithPath(mi, param.DownloadPath)
+	if err != nil {
+		return "", err
+	}
+	param.InfoHash = infoHash
+	task, err := tm.createTask(t, param)
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +211,14 @@ func (tm *Manager) Start(param Param, wait bool) error {
 			if task.GetTaskParam().Download != param.Download {
 				task.GetTaskParam().Download = param.Download
 				if err := db.UpdateTaskDownload(task.GetTaskParam().Download, task.param.InfoHash); err != nil {
-					return fmt.Errorf("任务 %s 下载状态更新失败 %w", task.param.InfoHash, err)
+					return fmt.Errorf("任务 %s Download状态更新失败 %w", task.param.InfoHash, err)
+				}
+			}
+
+			if task.GetTaskParam().DownloadAll != param.DownloadAll {
+				task.GetTaskParam().DownloadAll = param.DownloadAll
+				if err := db.UpdateTaskDownloadAll(task.GetTaskParam().DownloadAll, task.param.InfoHash); err != nil {
+					return fmt.Errorf("任务 %s DownloadAll状态更新失败 %w", task.param.InfoHash, err)
 				}
 			}
 
@@ -278,6 +320,7 @@ func (tm *Manager) GetTasks() ([]TorrentDbTask, error) {
 
 func (tm *Manager) SaveTorrent(mi *metainfo.MetaInfo) (TorrentInfoWrapper, error) {
 	if t, err := tm.client.AddTorrent(mi); err == nil {
+		defer t.Drop()
 		infoHash := t.InfoHash().String()
 		if db.SelectTorrentDataCount(infoHash) == 0 {
 			if b, err := bencode.Marshal(t.Metainfo()); err == nil {

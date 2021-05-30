@@ -1,5 +1,5 @@
 <template>
-  <a-directory-tree :load-data="loadPathData" :tree-data="treeData" @select="nodeSelect">
+  <a-directory-tree :load-data="loadPathData" :tree-data="treeData" @select="onSelect">
   </a-directory-tree>
 </template>
 
@@ -20,7 +20,7 @@ export default {
     }
   },
   methods: {
-    nodeSelect(selectedKeys) {
+    onSelect(selectedKeys) {
       this.$emit('on-path-select', selectedKeys[0])
     },
     loadPathData(treeNode) {

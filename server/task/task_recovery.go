@@ -25,8 +25,16 @@ func (tm *Manager) recoveryTorrent(dbTask *db.Task, mi *metainfo.MetaInfo) (*tor
 			return nil, err
 		}
 	} else {
-		// todo 文件恢复
-		return nil, fmt.Errorf("文件恢复未实现")
+		// 查询种子文件
+		if mi, err := db.SelectMetaInfo(dbTask.CreateTorrentInfo); err == nil {
+			if mt, err := tm.newMetaInfoTorrentWithPath(mi, dbTask.DownloadPath); err == nil {
+				t = mt
+			} else {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 	return t, nil
 }
@@ -57,9 +65,10 @@ func (tm *Manager) recoveryTask(dbTask *db.Task, mi *metainfo.MetaInfo) (*Torren
 		param := Param{
 			InfoHash:          infoHash,
 			Download:          dbTask.Download,
+			DownloadAll:       dbTask.DownloadAll,
 			DownloadFiles:     dbTask.DownloadFiles,
 			DownloadPath:      dbTask.DownloadPath,
-			createTorrentInfo: dbTask.CreateTorrentInfo,
+			CreateTorrentInfo: dbTask.CreateTorrentInfo,
 		}
 		task := newTask(t, tm, param)
 		tm.taskMap.Store(t.InfoHash().String(), task)
@@ -75,6 +84,9 @@ func (tm *Manager) recoveryTaskWithHash(infoHash string) (*TorrentTask, error) {
 	if err != nil {
 		return nil, fmt.Errorf("任务 %s 信息不存在", infoHash)
 	}
-	mi, _ := db.SelectMetaInfo(infoHash)
+	mi, err := db.SelectMetaInfo(infoHash)
+	if err != nil {
+		return nil, err
+	}
 	return tm.recoveryTask(&dbTask, mi)
 }

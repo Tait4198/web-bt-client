@@ -57,11 +57,13 @@ func (dt *TorrentTask) taskDownload() {
 	dt.download.run = true
 	go func() {
 		fMap := make(map[string]byte)
-		for _, file := range dt.param.DownloadFiles {
-			fMap[file] = 0
+		if !dt.param.DownloadAll {
+			for _, file := range dt.param.DownloadFiles {
+				fMap[file] = 0
+			}
 		}
 		for _, f := range t.Files() {
-			if len(dt.param.DownloadFiles) == 0 {
+			if dt.param.DownloadAll {
 				f.Download()
 				dt.download.downloadLength += f.Length()
 			} else {
@@ -156,7 +158,7 @@ func (dt *TorrentTask) taskGetInfo() error {
 	defer func() {
 		if t.Info() != nil {
 			fileLen := t.Length()
-			if len(t.Info().Files) > 0 {
+			if fileLen == 0 {
 				for _, f := range t.Info().Files {
 					fileLen += f.Length
 				}
@@ -269,10 +271,12 @@ func (dt *TorrentTask) reloadTorrent() error {
 	var mi *metainfo.MetaInfo
 	infoHash := dt.torrent.InfoHash().String()
 	if dt.torrent.Info() == nil {
+		// 种子文件任务必定存在MetaInfo
 		if m, err := db.SelectMetaInfo(infoHash); err == nil {
 			mi = m
 		} else {
-			if nt, err := dt.manager.newUriTorrentWithPath(dt.param.createTorrentInfo, dt.param.DownloadPath); err == nil {
+			// 磁力链接任务
+			if nt, err := dt.manager.newUriTorrentWithPath(dt.param.CreateTorrentInfo, dt.param.DownloadPath); err == nil {
 				dt.torrent = nt
 				return nil
 			} else {

@@ -29,6 +29,7 @@ func InitDb() {
 			meta_info            tinyint(1)                    default 0,
 			pause                tinyint(1)                    default 0,
 			download             tinyint(1)                    default 0,
+			download_all         tinyint(1)                    default 0,
 			download_path        varchar(2048)        not null,
 			download_files       text                 not null default '',
 			file_length          bigint                        default 0,

@@ -14,17 +14,26 @@ const (
 	QueueStatus MessageType = 1006
 )
 
+type NewTaskType string
+
+const (
+	UriType  NewTaskType = "uri"
+	FileType NewTaskType = "file"
+)
+
 type Param struct {
-	InfoHash      string   `json:"info_hash"`
-	DownloadPath  string   `json:"download_path"`
-	DownloadFiles []string `json:"download_files"`
+	TaskType      NewTaskType `json:"task_type"`
+	InfoHash      string      `json:"info_hash"`
+	DownloadPath  string      `json:"download_path"`
+	DownloadFiles []string    `json:"download_files"`
+	DownloadAll   bool        `json:"download_all"`
 
 	// 是否下载文件
 	Download bool `json:"download"`
 	// 恢复下载时参数是否更新
 	Update bool `json:"update"`
 
-	createTorrentInfo string
+	CreateTorrentInfo string `json:"create_torrent_info"`
 }
 
 type TorrentBase struct {

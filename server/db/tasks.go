@@ -17,6 +17,7 @@ type Task struct {
 	MetaInfo           bool     `json:"meta_info"`
 	Pause              bool     `json:"pause"`
 	Download           bool     `json:"download"`
+	DownloadAll        bool     `json:"download_all"`
 	DownloadPath       string   `json:"download_path"`
 	DownloadFiles      []string `json:"download_files"`
 	FileLength         int64    `json:"file_length"`
@@ -94,13 +95,14 @@ func InsertTask(task Task) error {
 	if err != nil {
 		return fmt.Errorf("InsertTask Marshal 失败 %w", err)
 	}
-	return ExecSql("insert into tasks values (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+	return ExecSql("insert into tasks values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 		task.InfoHash,
 		task.TorrentName,
 		boolToInt(task.Complete),
 		boolToInt(task.MetaInfo),
 		boolToInt(task.Pause),
 		boolToInt(task.Download),
+		boolToInt(task.DownloadAll),
 		task.DownloadPath,
 		downloadFiles,
 		task.FileLength,
@@ -125,6 +127,10 @@ func UpdateTaskPause(pause bool, infoHash string) error {
 
 func UpdateTaskDownload(download bool, infoHash string) error {
 	return ExecSql("update tasks set download = ? where info_hash = ?", boolToInt(download), infoHash)
+}
+
+func UpdateTaskDownloadAll(downloadAll bool, infoHash string) error {
+	return ExecSql("update tasks set download_all = ? where info_hash = ?", boolToInt(downloadAll), infoHash)
 }
 
 func UpdateTaskComplete(complete bool, infoHash string) error {
@@ -158,6 +164,7 @@ func stmtConvertTask(stmt *sqlite.Stmt) (Task, error) {
 	task.MetaInfo = stmt.GetInt64("meta_info") == 1
 	task.Pause = stmt.GetInt64("pause") == 1
 	task.Download = stmt.GetInt64("download") == 1
+	task.DownloadAll = stmt.GetInt64("download_all") == 1
 	task.DownloadPath = stmt.GetText("download_path")
 	task.FileLength = stmt.GetInt64("file_length")
 	task.CompleteFileLength = stmt.GetInt64("complete_file_length")

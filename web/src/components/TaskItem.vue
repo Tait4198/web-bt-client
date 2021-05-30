@@ -1,79 +1,87 @@
 <template>
-  <a-card class="item">
-    <a-row>
-      <a-col :lg="12" :sm="24" :xs="24">
-        <a-badge :status="taskStatus"/>
-        <span class="name">{{ taskData.torrent_name }}</span>
-      </a-col>
-      <a-col :lg="12" :sm="24" :xs="24">
-        <div class="file-size" v-if="taskData.file_length">
-          <span>{{ fileSize }}</span>
-        </div>
-      </a-col>
-      <a-col class="progress">
-        <div>
-          <a-progress :percent="percent" :strokeWidth="8"/>
-        </div>
-      </a-col>
-      <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
-        <div class="status" v-if="active">
-          <div class="icon-status" v-if="taskData.queue">
-            <a-icon type="hourglass"/>
-            <span>正在队列等待</span>
+  <div>
+    <a-card class="item">
+      <a-row>
+        <a-col :lg="16" :sm="24" :xs="24">
+          <a-badge :status="taskStatus"/>
+          <span class="name">{{ taskData.torrent_name }}</span>
+        </a-col>
+        <a-col :lg="8" :sm="24" :xs="24">
+          <div class="file-size" v-if="taskData.file_length">
+            <span>{{ fileSize }}</span>
           </div>
-
-          <div class="icon-status" v-else-if="!taskData.meta_info">
-            <a-spin>
-              <a-icon slot="indicator" type="loading" style="font-size: 16px" spin/>
-            </a-spin>
-            <span>正在获取信息</span>
+        </a-col>
+        <a-col class="progress">
+          <div>
+            <a-progress :percent="percent" :strokeWidth="8"/>
           </div>
+        </a-col>
+        <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
+          <div class="status" v-if="active">
+            <div class="icon-status" v-if="taskData.queue">
+              <a-icon type="hourglass"/>
+              <span>正在队列等待</span>
+            </div>
 
-          <a-space :size="16" v-else>
+            <div class="icon-status" v-else-if="!taskData.meta_info">
+              <a-spin>
+                <a-icon slot="indicator" type="loading" style="font-size: 16px" spin/>
+              </a-spin>
+              <span>正在获取信息</span>
+            </div>
+
+            <a-space :size="16" v-else>
             <span>
              <a-icon type="arrow-down"/> {{ read.speed || '0 B' }}
             </span>
-            <span>
+              <span>
              <a-icon type="arrow-up"/> {{ write.speed || '0 B' }}
             </span>
-            <span>
+              <span>
               Peers {{ peers }}
             </span>
-            <span v-if="remainingTime">
+              <span v-if="remainingTime">
               {{ remainingTime }}
             </span>
-          </a-space>
-        </div>
-      </a-col>
+            </a-space>
+          </div>
+        </a-col>
 
-      <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
-        <div style="float: right">
-          <a-space>
-            <a-button icon="arrow-right"
-                      type="primary"
-                      :disabled="taskData.wait"
-                      @click="handleTaskStart"
-                      v-if="!active">
-              开始
-            </a-button>
-            <a-button icon="pause"
-                      :disabled="taskData.wait"
-                      @click="handleTaskStop"
-                      v-else>
-              暂停
-            </a-button>
+        <a-col :lg="12" :sm="24" :xs="24" class="item-bottom">
+          <div style="float: right">
+            <a-space>
+              <a-dropdown-button
+                  :disabled="taskData.wait"
+                  @click="handleTaskStart"
+                  v-if="!active">
+                <a-icon type="vertical-align-bottom"/>
+                开始
+                <a-menu slot="overlay">
+                  <a-menu-item @click="partDownload" :disabled="!taskData.meta_info">
+                    <a-icon type="unordered-list"/>
+                    部分下载
+                  </a-menu-item>
+                </a-menu>
+              </a-dropdown-button>
+              <a-button icon="pause"
+                        :disabled="taskData.wait"
+                        @click="handleTaskStop"
+                        v-else>
+                暂停
+              </a-button>
 
-            <a-button icon="stock">
-              详情
-            </a-button>
-            <a-button icon="delete" type="danger">
-              删除
-            </a-button>
-          </a-space>
-        </div>
-      </a-col>
-    </a-row>
-  </a-card>
+              <a-button icon="stock">
+                详情
+              </a-button>
+              <a-button icon="delete" type="danger">
+                删除
+              </a-button>
+            </a-space>
+          </div>
+        </a-col>
+      </a-row>
+    </a-card>
+  </div>
 </template>
 
 <script>
@@ -132,11 +140,13 @@ export default {
   methods: {
     handleTaskStart() {
       this.remainingTime = ''
-
       this.$emit("task-start", this.taskData.info_hash)
     },
     handleTaskStop() {
       this.$emit("task-stop", this.taskData.info_hash)
+    },
+    partDownload() {
+      this.$emit('task-part-download', this.taskData)
     },
     calcTime(s) {
       let day = Math.floor(s / (24 * 3600))
@@ -235,7 +245,7 @@ export default {
 
   .progress {
     padding-top: 36px;
-    padding-right: 24px;
+    padding-right: 12px;
   }
 
   .status {

@@ -14,7 +14,7 @@ func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) To
 			Type:     Stats,
 		},
 		TorrentDownload: TorrentDownload{
-			Length:         dt.torrent.Length(),
+			Length:         GetTorrentLength(dt.torrent),
 			DownloadLength: dt.download.downloadLength,
 			BytesCompleted: dt.torrent.BytesCompleted(),
 		},
@@ -58,7 +58,7 @@ func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) To
 func (dt *TorrentTask) GetTorrentInfo(includeFile bool) (TorrentInfoWrapper, error) {
 	if tiw, err := GetTorrentInfo(dt.torrent, includeFile); err == nil {
 		tiw.TorrentDownload = TorrentDownload{
-			Length:         dt.torrent.Length(),
+			Length:         GetTorrentLength(dt.torrent),
 			DownloadLength: dt.download.downloadLength,
 			BytesCompleted: dt.torrent.BytesCompleted(),
 		}
@@ -73,6 +73,10 @@ func GetTorrentInfo(t *torrent.Torrent, includeFile bool) (TorrentInfoWrapper, e
 		return TorrentInfoWrapper{}, fmt.Errorf(" %s 未获取 MateInfo", t.InfoHash().String())
 	}
 	torrentInfoWrapper := TorrentInfoWrapper{
+		TorrentDownload: TorrentDownload{
+			Length:         GetTorrentLength(t),
+			BytesCompleted: t.BytesCompleted(),
+		},
 		TorrentBase: TorrentBase{
 			InfoHash: t.InfoHash().String(),
 			Type:     Info,
@@ -117,4 +121,14 @@ func GetTorrentInfo(t *torrent.Torrent, includeFile bool) (TorrentInfoWrapper, e
 	}
 
 	return torrentInfoWrapper, nil
+}
+
+func GetTorrentLength(t *torrent.Torrent) int64 {
+	fileLen := t.Length()
+	if fileLen == 0 {
+		for _, f := range t.Info().Files {
+			fileLen += f.Length
+		}
+	}
+	return fileLen
 }

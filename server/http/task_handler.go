@@ -8,29 +8,20 @@ import (
 	"strconv"
 )
 
-type UriTaskParam struct {
-	Uri       string     `json:"uri"`
-	TaskParam task.Param `json:"task_param"`
-}
-
-func newUriTask(c *gin.Context) {
-	uriTaskParam := UriTaskParam{}
-	err := c.BindJSON(&uriTaskParam)
+func createTask(c *gin.Context) {
+	taskParam := task.Param{}
+	err := c.BindJSON(&taskParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, MessageJson(false, "无效参数"))
 		return
 	}
 	tm := task.GetTaskManager()
-	hash, err := tm.AddUriTask(uriTaskParam.Uri, uriTaskParam.TaskParam)
+	hash, err := tm.CreateTask(taskParam)
 	if err == nil {
 		c.JSON(http.StatusOK, DataJson(true, hash))
 	} else {
 		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
 	}
-}
-
-func newFileTask(c *gin.Context) {
-
 }
 
 func stopTask(c *gin.Context) {
@@ -98,12 +89,18 @@ func sentStatus(c *gin.Context) {
 	})
 }
 
+func taskExists(c *gin.Context) {
+	hash := c.DefaultQuery("hash", "")
+	tm := task.GetTaskManager()
+	c.JSON(http.StatusOK, DataJson(true, tm.TaskExists(hash)))
+}
+
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
-	groupRouter.POST("/new/uri", newUriTask)
-	groupRouter.POST("/new/file", newFileTask)
+	groupRouter.POST("/create", createTask)
 	groupRouter.GET("/stop", stopTask)
 	groupRouter.POST("/start", startTask)
 	groupRouter.POST("/restart", restartTask)
 	groupRouter.GET("/list", taskList)
+	groupRouter.GET("/exists", taskExists)
 	groupRouter.GET("/send", sentStatus)
 }
