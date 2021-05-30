@@ -88,7 +88,7 @@
              @ok="handleFileCheckOk">
       <div class="tree-select">
         <file-tree @on-file-check="handleFileCheck"
-                   :checked-keys="form.checkedFiles" :torrent-data="torrentData"></file-tree>
+                   :default-checked-keys="form.checkedFiles" :torrent-data="torrentData"></file-tree>
       </div>
     </a-modal>
 

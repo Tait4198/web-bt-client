@@ -22,6 +22,8 @@ import {
     Dropdown,
     Menu,
     Popconfirm,
+    Drawer,
+    Descriptions,
     message,
     notification,
 } from 'ant-design-vue'
@@ -58,6 +60,9 @@ Vue.component(Dropdown.Button.name, Dropdown.Button)
 Vue.component(Menu.name, Menu)
 Vue.component(Menu.Item.name, Menu.Item)
 Vue.component(Popconfirm.name, Popconfirm)
+Vue.component(Drawer.name, Drawer)
+Vue.component(Descriptions.name, Descriptions)
+Vue.component(Descriptions.Item.name, Descriptions.Item)
 
 Vue.config.productionTip = false
 

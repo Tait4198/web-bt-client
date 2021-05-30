@@ -5,7 +5,7 @@ import (
 	"github.com/anacrolix/torrent"
 )
 
-func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) TorrentStatsWrapper {
+func (dt *TorrentTask) GetTorrentStats(includeChunks, includePeers, includePieces bool) TorrentStatsWrapper {
 	torrentStats := dt.torrent.Stats()
 
 	torrentStatsWrapper := TorrentStatsWrapper{
@@ -31,6 +31,10 @@ func (dt *TorrentTask) GetTorrentStats(includeChunks bool, includePeers bool) To
 	bytesWrittenData := torrentStats.BytesWrittenData
 	torrentStatsWrapper.BytesWritten = bytesWritten.Int64()
 	torrentStatsWrapper.BytesWrittenData = bytesWrittenData.Int64()
+
+	if includePieces {
+		torrentStatsWrapper.TorrentPieces = GetTorrentPieces(dt.torrent)
+	}
 
 	if includeChunks {
 		chunksRead := torrentStats.ChunksRead
@@ -81,17 +85,9 @@ func GetTorrentInfo(t *torrent.Torrent, includeFile bool) (TorrentInfoWrapper, e
 			InfoHash: t.InfoHash().String(),
 			Type:     Info,
 		},
-		Name: t.Name(),
+		TorrentPieces: GetTorrentPieces(t),
+		Name:          t.Name(),
 	}
-
-	completedPieces := 0
-	for _, psr := range t.PieceStateRuns() {
-		if psr.Complete {
-			completedPieces += psr.Length
-		}
-	}
-	torrentInfoWrapper.CompletedPieces = completedPieces
-	torrentInfoWrapper.Pieces = t.NumPieces()
 
 	if includeFile {
 		var files = make([]TorrentInfoFileWrapper, len(t.Files()))
@@ -105,11 +101,15 @@ func GetTorrentInfo(t *torrent.Torrent, includeFile bool) (TorrentInfoWrapper, e
 				}
 			}
 			torrentFile := TorrentInfoFileWrapper{
-				Path:            f.FileInfo().Path,
-				Length:          f.Length(),
-				BytesCompleted:  f.BytesCompleted(),
-				Pieces:          filePieces,
-				CompletedPieces: fileCompletedPieces,
+				Path: f.FileInfo().Path,
+				TorrentDownload: TorrentDownload{
+					Length:         f.Length(),
+					BytesCompleted: f.BytesCompleted(),
+				},
+				TorrentPieces: TorrentPieces{
+					Pieces:          filePieces,
+					CompletedPieces: fileCompletedPieces,
+				},
 			}
 			files[i] = torrentFile
 		}
@@ -131,4 +131,17 @@ func GetTorrentLength(t *torrent.Torrent) int64 {
 		}
 	}
 	return fileLen
+}
+
+func GetTorrentPieces(t *torrent.Torrent) TorrentPieces {
+	completedPieces := 0
+	for _, psr := range t.PieceStateRuns() {
+		if psr.Complete {
+			completedPieces += psr.Length
+		}
+	}
+	return TorrentPieces{
+		Pieces:          t.NumPieces(),
+		CompletedPieces: completedPieces,
+	}
 }

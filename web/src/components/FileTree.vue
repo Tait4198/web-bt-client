@@ -1,5 +1,7 @@
 <template>
-  <a-tree :tree-data="treeData" :default-checked-keys="checkedKeys" checkable @check="onCheck">
+  <a-tree :tree-data="treeData"
+          :default-checked-keys="defaultCheckedKeys"
+          checkable @check="onCheck">
     <template slot="custom" slot-scope="item">
       <div>
         <span>{{ item.title }}</span>
@@ -21,11 +23,15 @@ export default {
         return {}
       }
     },
-    checkedKeys: {
+    defaultCheckedKeys: {
       type: Array,
       default: () => {
         return []
       }
+    },
+    disableCheckbox: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -42,6 +48,7 @@ export default {
           title: this.torrentData.name,
           children: array,
           length: this.torrentData.length,
+          disableCheckbox: this.disableCheckbox,
           scopedSlots: {
             title: 'custom'
           }
@@ -89,6 +96,7 @@ export default {
           key: value.key,
           title: value.title,
           length: value.length,
+          disableCheckbox: this.disableCheckbox,
           scopedSlots: {
             title: 'custom'
           }

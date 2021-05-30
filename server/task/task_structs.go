@@ -48,13 +48,16 @@ type TorrentDownload struct {
 	BytesCompleted int64 `json:"bytes_completed"`
 }
 
+type TorrentPieces struct {
+	Pieces          int `json:"pieces"`
+	CompletedPieces int `json:"completed_pieces"`
+}
+
 type TorrentInfoWrapper struct {
 	TorrentBase
 	TorrentDownload
+	TorrentPieces
 	Name string `json:"name"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
 
 	Files []TorrentInfoFileWrapper `json:"files,omitempty"`
 }
@@ -62,16 +65,14 @@ type TorrentInfoWrapper struct {
 type TorrentInfoFileWrapper struct {
 	Path []string `json:"path"`
 
-	Length         int64 `json:"length"`
-	BytesCompleted int64 `json:"bytes_completed"`
-
-	Pieces          int `json:"pieces"`
-	CompletedPieces int `json:"completed_pieces"`
+	TorrentDownload
+	TorrentPieces
 }
 
 type TorrentStatsWrapper struct {
 	TorrentBase
 	TorrentDownload
+	TorrentPieces
 
 	BytesRead           int64 `json:"bytes_read"`
 	BytesReadData       int64 `json:"bytes_read_data"`

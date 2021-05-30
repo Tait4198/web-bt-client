@@ -6,6 +6,7 @@
                    @task-start="handleTaskStart"
                    @task-stop="handleTaskStop"
                    @task-part-download="handleTaskPartDownload"
+                   @task-detail="handleShowDetail"
                    @task-delete="handleTaskDelete">
         </task-item>
       </a-list-item>
@@ -22,10 +23,14 @@
           </a-spin>
         </div>
         <file-tree v-else @on-file-check="handleFileCheck"
-                   :checked-keys="partDownload.taskData.download_files"
+                   :default-checked-keys="partDownload.taskData.download_files"
                    :torrent-data="partDownload.taskData.torrentData"></file-tree>
       </div>
     </a-modal>
+
+    <task-detail :visible="taskDetail.visible"
+                 :task-data="taskDetail.taskData"
+                 @on-close="handleCloseDetail"></task-detail>
   </div>
 </template>
 
@@ -33,6 +38,7 @@
 import {getTaskList, taskStart, taskStop, taskRestart, taskDelete, getTorrentInfo} from "@/http/api";
 import TaskItem from "./TaskItem"
 import FileTree from "./FileTree";
+import TaskDetail from "./TaskDetail";
 import {
   TaskInfo,
   TaskStats,
@@ -48,7 +54,8 @@ export default {
   name: "TaskList",
   components: {
     TaskItem,
-    FileTree
+    FileTree,
+    TaskDetail
   },
   mounted() {
     this.typFuncMap.set(TaskStats, this.wsTaskStats)
@@ -166,24 +173,16 @@ export default {
       })
     },
     handleTaskPartDownload(taskData) {
-      this.partDownload.visible = true
-      this.partDownload.checkedFilesUpdate = false
       this.partDownload.taskData = taskData
+      this.partDownload.checkedFilesUpdate = false
+      this.partDownload.visible = true
       this.partDownload.tempCheckedKeys = []
 
       if (!taskData.torrentData) {
         this.partDownload.loading = true
-        getTorrentInfo({hash: taskData.info_hash}).then(res => {
-              let {data} = res
-              if (data) {
-                this.$set(taskData, 'torrentData', data)
-                if (taskData.download_all) {
-                  this.partDownload.download_files = data.files.map(f => f.path.join("/"))
-                }
-              }
-            }
-        ).finally(() => {
-          this.partDownload.loading = false
+        let that = this
+        this.getTorrent(taskData, function () {
+          that.partDownload.loading = false
         })
       } else {
         this.partDownload.taskData = taskData
@@ -232,6 +231,38 @@ export default {
         }
       })
     },
+    handleShowDetail(taskData) {
+      this.taskDetail.taskData = taskData
+      this.taskDetail.visible = true
+
+      if (!taskData.torrentData) {
+        this.taskDetail.loading = true
+        let that = this
+        this.getTorrent(taskData, function () {
+          that.taskDetail.loading = false
+        })
+      }
+    },
+    handleCloseDetail() {
+      this.taskDetail.visible = false
+    },
+
+    getTorrent(taskData, finallyCb) {
+      getTorrentInfo({hash: taskData.info_hash}).then(res => {
+            let {data} = res
+            if (data) {
+              this.$set(taskData, 'torrentData', data)
+              if (taskData.download_all) {
+                taskData.download_files = data.files.map(f => f.path.join("/"))
+              }
+            }
+          }
+      ).finally(() => {
+        if (finallyCb) {
+          finallyCb()
+        }
+      })
+    },
     taskStart(taskData) {
       taskData.pause = false
       taskData.wait = true
@@ -263,6 +294,18 @@ export default {
         checkedFilesUpdate: false,
         tempCheckedKeys: [],
         checkedKeys: [],
+        taskData: {
+          info_hash: '',
+          download_files: [],
+          torrentData: {
+            name: '',
+            files: []
+          }
+        }
+      },
+      taskDetail: {
+        visible: false,
+        loading: false,
         taskData: {
           info_hash: '',
           download_files: [],

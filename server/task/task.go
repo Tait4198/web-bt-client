@@ -124,7 +124,7 @@ func (dt *TorrentTask) taskDownload() {
 					)
 					fmt.Println(line)
 
-					wsm.Broadcast(dt.GetTorrentStats(false, true))
+					wsm.Broadcast(dt.GetTorrentStats(false, true, true))
 				} else {
 					if err := db.TaskComplete(t.BytesCompleted(), t.InfoHash().String()); err != nil {
 						log.Printf("任务 %s 完成信息更新失败 %s \n", t.InfoHash().String(), err)

@@ -70,7 +70,7 @@
                 暂停
               </a-button>
 
-              <a-button icon="stock">
+              <a-button icon="stock" @click="handleShowDetail">
                 详情
               </a-button>
 
@@ -157,6 +157,9 @@ export default {
     },
     handleDelete() {
       this.$emit('task-delete', this.taskData.info_hash)
+    },
+    handleShowDetail() {
+      this.$emit('task-detail', this.taskData)
     },
     calcTime(s) {
       let day = Math.floor(s / (24 * 3600))
