@@ -57,7 +57,7 @@
                 <a-icon type="vertical-align-bottom"/>
                 开始
                 <a-menu slot="overlay">
-                  <a-menu-item @click="partDownload" :disabled="!taskData.meta_info">
+                  <a-menu-item @click="handlePartDownload" :disabled="!taskData.meta_info">
                     <a-icon type="unordered-list"/>
                     部分下载
                   </a-menu-item>
@@ -73,9 +73,16 @@
               <a-button icon="stock">
                 详情
               </a-button>
-              <a-button icon="delete" type="danger">
-                删除
-              </a-button>
+
+              <a-popconfirm
+                  :title="`确认删除?`"
+                  ok-text="确认"
+                  cancel-text="取消"
+                  @confirm="handleDelete">
+                <a-button icon="delete" type="danger">
+                  删除
+                </a-button>
+              </a-popconfirm>
             </a-space>
           </div>
         </a-col>
@@ -145,8 +152,11 @@ export default {
     handleTaskStop() {
       this.$emit("task-stop", this.taskData.info_hash)
     },
-    partDownload() {
+    handlePartDownload() {
       this.$emit('task-part-download', this.taskData)
+    },
+    handleDelete() {
+      this.$emit('task-delete', this.taskData.info_hash)
     },
     calcTime(s) {
       let day = Math.floor(s / (24 * 3600))

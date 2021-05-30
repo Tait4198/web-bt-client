@@ -14,6 +14,10 @@ export const taskStop = (params) => GET('/task/stop', params, {
     baseURL
 })
 
+export const taskDelete = (params) => GET('/task/delete', params, {
+    baseURL
+})
+
 export const taskRestart = (params) => POST('/task/restart', params, {
     baseURL
 })

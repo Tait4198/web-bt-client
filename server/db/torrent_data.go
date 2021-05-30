@@ -12,7 +12,7 @@ import (
 func SelectMetaInfo(infoHash string) (*metainfo.MetaInfo, error) {
 	if mis, err := SelectMateInfoList([]string{infoHash}); err == nil && len(mis) == 1 {
 		return mis[0], nil
-	} else if len(mis) == -0 {
+	} else if len(mis) == 0 {
 		return nil, fmt.Errorf("SelectMetaInfo %s 不存在", infoHash)
 	} else {
 		return nil, err

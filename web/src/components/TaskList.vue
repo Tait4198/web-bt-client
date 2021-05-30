@@ -5,7 +5,8 @@
         <task-item :task-data="item"
                    @task-start="handleTaskStart"
                    @task-stop="handleTaskStop"
-                   @task-part-download="handleTaskPartDownload">
+                   @task-part-download="handleTaskPartDownload"
+                   @task-delete="handleTaskDelete">
         </task-item>
       </a-list-item>
     </a-list>
@@ -29,7 +30,7 @@
 </template>
 
 <script>
-import {getTaskList, taskStart, taskStop, taskRestart, getTorrentInfo} from "@/http/api";
+import {getTaskList, taskStart, taskStop, taskRestart, taskDelete, getTorrentInfo} from "@/http/api";
 import TaskItem from "./TaskItem"
 import FileTree from "./FileTree";
 import {
@@ -40,6 +41,7 @@ import {
   TaskPause,
   TaskComplete,
   TaskQueueStatus,
+  TaskDelete,
 } from "../constant/constant";
 
 export default {
@@ -56,6 +58,7 @@ export default {
     this.typFuncMap.set(TaskPause, this.wsTaskPause)
     this.typFuncMap.set(TaskComplete, this.wsTaskComplete)
     this.typFuncMap.set(TaskQueueStatus, this.wsTaskQueueStatus)
+    this.typFuncMap.set(TaskDelete, this.wsTaskDelete)
 
     getTaskList().then(res => {
       let {data} = res
@@ -126,6 +129,11 @@ export default {
     },
     wsTaskQueueStatus(taskData, obj) {
       taskData.queue = obj.status
+    },
+    wsTaskDelete(taskData, obj) {
+      if (obj.status) {
+        this.$delete(this.tasks, taskData.info_hash)
+      }
     },
 
     handleTaskStart(infoHash) {
@@ -213,10 +221,21 @@ export default {
       this.partDownload.tempCheckedKeys = keys
       this.partDownload.checkedFilesUpdate = true
     },
-
+    handleTaskDelete(infoHash) {
+      taskDelete({
+        hash: infoHash
+      }).then(res => {
+        if (res.status) {
+          this.$message.success(`任务 ${this.tasks[infoHash].torrent_name} 删除成功`)
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    },
     taskStart(taskData) {
       taskData.pause = false
       taskData.wait = true
+      taskData.complete = false
       setTimeout(() => {
         taskData.wait = false
       }, 3000)

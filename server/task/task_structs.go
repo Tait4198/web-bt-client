@@ -12,6 +12,7 @@ const (
 	Pause       MessageType = 1004
 	Complete    MessageType = 1005
 	QueueStatus MessageType = 1006
+	Delete      MessageType = 1007
 )
 
 type NewTaskType string

@@ -150,6 +150,10 @@ func UpdateTaskCompleteFileLength(completeFileLength int64, infoHash string) err
 		completeFileLength, infoHash)
 }
 
+func DeleteTask(infoHash string) error {
+	return ExecSql("delete from tasks where info_hash = ?", infoHash)
+}
+
 func TaskComplete(completeFileLength int64, infoHash string) error {
 	return ExecSql("update tasks set complete_file_length = ?, complete=1, download = 0, pause = 1, complete_time = ?"+
 		" where info_hash = ?",

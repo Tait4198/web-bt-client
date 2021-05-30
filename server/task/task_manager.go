@@ -6,6 +6,7 @@ import (
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
+	"github.com/web-bt-client/base"
 	"github.com/web-bt-client/db"
 	"github.com/web-bt-client/ws"
 	"log"
@@ -252,6 +253,30 @@ func (tm *Manager) Stop(infoHash string, wait bool) error {
 	tm.execQueue.remove(task.param.InfoHash)
 
 	return nil
+}
+
+func (tm *Manager) Delete(infoHash string) error {
+	task, err := tm.getTask(infoHash)
+	if err != nil {
+		return err
+	}
+	if task != nil {
+		if task.active {
+			if err := tm.Stop(infoHash, false); err != nil {
+				return err
+			}
+		}
+		if err := db.DeleteTask(infoHash); err != nil {
+			return err
+		}
+		if !base.DeleteFile(task.GetTaskParam().DownloadPath, task.torrent.Name()) {
+			return fmt.Errorf("文件删除失败")
+		}
+		BroadcastTaskStatus(task, Delete, true)
+
+		return nil
+	}
+	return fmt.Errorf("任务 %s 不存在", infoHash)
 }
 
 func (tm *Manager) Restart(param Param) error {

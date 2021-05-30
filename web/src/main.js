@@ -21,6 +21,7 @@ import {
     Switch,
     Dropdown,
     Menu,
+    Popconfirm,
     message,
     notification,
 } from 'ant-design-vue'
@@ -56,6 +57,7 @@ Vue.component(Dropdown.name, Dropdown)
 Vue.component(Dropdown.Button.name, Dropdown.Button)
 Vue.component(Menu.name, Menu)
 Vue.component(Menu.Item.name, Menu.Item)
+Vue.component(Popconfirm.name, Popconfirm)
 
 Vue.config.productionTip = false
 

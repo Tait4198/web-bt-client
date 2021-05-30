@@ -24,6 +24,17 @@ func createTask(c *gin.Context) {
 	}
 }
 
+func deleteTask(c *gin.Context) {
+	hash := c.DefaultQuery("hash", "")
+	tm := task.GetTaskManager()
+	err := tm.Delete(hash)
+	if err == nil {
+		c.JSON(http.StatusOK, DataJson(true, hash))
+	} else {
+		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
+	}
+}
+
 func stopTask(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
 	tm := task.GetTaskManager()
@@ -97,6 +108,7 @@ func taskExists(c *gin.Context) {
 
 func InitTaskRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.POST("/create", createTask)
+	groupRouter.GET("/delete", deleteTask)
 	groupRouter.GET("/stop", stopTask)
 	groupRouter.POST("/start", startTask)
 	groupRouter.POST("/restart", restartTask)
