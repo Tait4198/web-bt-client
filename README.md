@@ -7,6 +7,6 @@
 
 ### 截图
 
-![01.png](https://github.com/Tait4198/web-bt-client/blob/main/screenshots/02.png?raw=true)
+![01.png](https://github.com/Tait4198/web-bt-client/blob/main/screenshots/01.png?raw=true)
 
 ![02.png](https://github.com/Tait4198/web-bt-client/blob/main/screenshots/02.png?raw=true)
