@@ -312,6 +312,20 @@ func (dt *TorrentTask) TaskWait() error {
 	return fmt.Errorf("任务 %s 等待中", dt.torrent.InfoHash().String())
 }
 
+func (dt *TorrentTask) FileComplete(path string) bool {
+	for _, f := range dt.torrent.Files() {
+		fmt.Println(f.DisplayPath())
+		if f.DisplayPath() == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (dt *TorrentTask) GetTorrentName() string {
+	return dt.torrent.Name()
+}
+
 func newTask(t *torrent.Torrent, tm *Manager, param Param) *TorrentTask {
 	return &TorrentTask{
 		torrent: t,

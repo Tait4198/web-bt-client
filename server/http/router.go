@@ -36,5 +36,7 @@ func Router() http.Handler {
 
 	baseRouter := router.Group("base")
 	InitBaseRouter(baseRouter)
+
+	router.Static("/web", "./html")
 	return router
 }

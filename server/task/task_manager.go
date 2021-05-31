@@ -106,7 +106,7 @@ func (tm *Manager) createTask(t *torrent.Torrent, param Param) (*TorrentTask, er
 	}
 }
 
-func (tm *Manager) getTask(infoHash string) (*TorrentTask, error) {
+func (tm *Manager) GetTask(infoHash string) (*TorrentTask, error) {
 	task := tm.taskMap.Load(infoHash)
 	if task == nil {
 		// 从数据库中恢复
@@ -198,7 +198,7 @@ func (tm *Manager) createFileTask(param Param) (string, error) {
 }
 
 func (tm *Manager) Start(param Param, wait bool) error {
-	task, err := tm.getTask(param.InfoHash)
+	task, err := tm.GetTask(param.InfoHash)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (tm *Manager) Stop(infoHash string, wait bool) error {
 }
 
 func (tm *Manager) Delete(infoHash string) error {
-	task, err := tm.getTask(infoHash)
+	task, err := tm.GetTask(infoHash)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (tm *Manager) Delete(infoHash string) error {
 }
 
 func (tm *Manager) Restart(param Param) error {
-	task, err := tm.getTask(param.InfoHash)
+	task, err := tm.GetTask(param.InfoHash)
 	if err != nil {
 		return err
 	}
@@ -321,7 +321,7 @@ func (tm *Manager) GetTasks() ([]TorrentDbTask, error) {
 		}
 		var tasks []TorrentDbTask
 		for _, dbTask := range dbTasks {
-			if task, err := tm.getTask(dbTask.InfoHash); err == nil &&
+			if task, err := tm.GetTask(dbTask.InfoHash); err == nil &&
 				task.torrent.BytesCompleted() > dbTask.CompleteFileLength {
 				dbTask.CompleteFileLength = task.torrent.BytesCompleted()
 			}
@@ -329,7 +329,7 @@ func (tm *Manager) GetTasks() ([]TorrentDbTask, error) {
 				Task: dbTask,
 			}
 			// 是否等待状态
-			if task, err := tm.getTask(dbTask.InfoHash); err == nil {
+			if task, err := tm.GetTask(dbTask.InfoHash); err == nil {
 				tdTask.Wait = task.wait
 			}
 			// 是否在队列

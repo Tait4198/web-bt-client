@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/gin-gonic/gin"
+	"github.com/web-bt-client/base"
 	"github.com/web-bt-client/task"
 	"net/http"
 	"strings"
@@ -11,9 +12,9 @@ import (
 
 func torrentInfo(c *gin.Context) {
 	hash := c.DefaultQuery("hash", "")
-	torrentInfo, err := task.GetTaskManager().GetTorrentInfo(strings.ToLower(hash))
+	info, err := task.GetTaskManager().GetTorrentInfo(strings.ToLower(hash))
 	if err == nil {
-		c.JSON(http.StatusOK, DataJson(true, torrentInfo))
+		c.JSON(http.StatusOK, DataJson(true, info))
 	} else {
 		c.JSON(http.StatusOK, MessageJson(false, err.Error()))
 	}
@@ -44,6 +45,29 @@ func torrentUpload(c *gin.Context) {
 }
 
 func torrentFileDownload(c *gin.Context) {
+	hash := c.DefaultQuery("hash", "")
+	path := c.DefaultQuery("path", "")
+	t, err := task.GetTaskManager().GetTask(hash)
+	if err != nil {
+		c.JSON(http.StatusOK, DataJson(true, err.Error()))
+		return
+	}
+	downloadPath := fmt.Sprintf("%s/%s", t.GetTaskParam().DownloadPath, t.GetTorrentName())
+	if base.Exists(downloadPath) {
+		var fullPath string
+		if base.IsDir(downloadPath) {
+			fullPath = fmt.Sprintf("%s/%s", downloadPath, path)
+		} else {
+			fullPath = downloadPath
+		}
+		if base.Exists(fullPath) && t.FileComplete(path) {
+			fp := strings.Split(path, "/")
+			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fp[len(fp)-1]))
+			c.File(fullPath)
+		}
+	} else {
+		c.JSON(http.StatusNotFound, DataJson(true, "NotFound"))
+	}
 }
 
 func InitTorrentRouter(groupRouter *gin.RouterGroup) {

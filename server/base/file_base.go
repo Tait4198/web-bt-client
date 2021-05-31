@@ -7,8 +7,8 @@ import (
 
 func DeleteFile(dir string, file string) bool {
 	path := fmt.Sprintf("%s/%s", dir, file)
-	if exists(path) {
-		if isDir(path) {
+	if Exists(path) {
+		if IsDir(path) {
 			err := os.RemoveAll(path)
 			if err != nil {
 				return false
@@ -22,7 +22,7 @@ func DeleteFile(dir string, file string) bool {
 	}
 	return true
 }
-func exists(path string) bool {
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsExist(err) {
@@ -33,7 +33,7 @@ func exists(path string) bool {
 	return true
 }
 
-func isDir(path string) bool {
+func IsDir(path string) bool {
 	s, err := os.Stat(path)
 	if err != nil {
 		return false

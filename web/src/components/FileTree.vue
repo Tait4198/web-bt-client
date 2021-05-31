@@ -6,14 +6,26 @@
     <template slot="custom" slot-scope="item">
       <div>
         <span>{{ item.title }}</span>
-        <span style="margin-left: 24px">{{ fileSize(item.length) }}</span>
+        <span style="margin-left: 24px">{{ byteSize(item.length) }}</span>
       </div>
     </template>
     <template slot="detail" slot-scope="item">
-      <div>
-        <span>{{ item.title }}</span>
-        <a-button type="link" style="margin-left: 20px"> Link</a-button>
-      </div>
+      <a-space>
+        <p class="file-name">{{ item.title }}</p>
+        <span>{{ byteSize(item.length) }}</span>
+        <span v-if="item.stats">
+          <a-button type="link" v-if="item.stats.completed_pieces === item.stats.pieces"
+                    class="download-link" @click="onDownload(item.key)">
+            下载
+          </a-button>
+          <span v-else-if="item.stats.percent > 0">
+          {{ `${(item.stats.percent / 100).toFixed(2)}%` }}
+          </span>
+          <span v-else>
+            0%
+          </span>
+        </span>
+      </a-space>
     </template>
   </a-tree>
 </template>
@@ -59,6 +71,7 @@ export default {
           title: this.torrentData.name,
           children: array,
           length: this.torrentData.length,
+          isLeaf: false,
           disableCheckbox: this.disableCheckbox,
           scopedSlots: {
             title: this.itemSlot
@@ -73,7 +86,10 @@ export default {
     onCheck(checkedKeys) {
       this.$emit('on-file-check', checkedKeys)
     },
-    fileSize(length) {
+    onDownload(key) {
+      this.$emit('on-download', key)
+    },
+    byteSize(length) {
       return byteSize(length)
     },
     convertMap(parentMap, parentKey, file, depth) {
@@ -93,6 +109,16 @@ export default {
         }
         if (depth + 1 < file.path.length) {
           newNode.map = new Map()
+          newNode.isLeaf = false
+        } else {
+          newNode.isLeaf = true
+          newNode.stats = {
+            length: file.length,
+            pieces: file.pieces,
+            bytes_completed: file.bytes_completed,
+            completed_pieces: file.completed_pieces,
+            percent: file.bytes_completed / file.length
+          }
         }
         parentMap.set(dPath, newNode)
       }
@@ -107,6 +133,8 @@ export default {
           key: value.key,
           title: value.title,
           length: value.length,
+          isLeaf: value.isLeaf,
+          stats: value.stats,
           disableCheckbox: this.disableCheckbox,
           scopedSlots: {
             title: this.itemSlot
@@ -123,6 +151,16 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="less">
+.download-link {
+  padding: 0 !important;
+}
 
+.file-name {
+  max-width: 400px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin: 0 !important;
+}
 </style>

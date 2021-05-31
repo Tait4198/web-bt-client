@@ -1,6 +1,7 @@
 import {GET, POST} from './http'
 
-const baseURL = `http://127.0.0.1:8080`
+// export const baseURL = `localhost:8080`
+export const baseURL = ``
 
 export const getTaskList = (params) => GET('/task/list', params, {
     baseURL

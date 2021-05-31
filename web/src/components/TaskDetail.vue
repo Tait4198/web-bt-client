@@ -1,5 +1,5 @@
 <template>
-  <a-drawer width="700" placement="right" :closable="false" :visible="visible" @close="onClose">
+  <a-drawer width="760" placement="right" :closable="false" :visible="visible" @close="onClose">
     <a-descriptions title="任务信息" layout="vertical" :column="{ md: 1, sm: 1, xs: 1 }">
       <a-descriptions-item label="任务名称">
         {{ taskData.torrent_name }}
@@ -30,6 +30,7 @@
 
       <file-tree v-if="visible"
                  item-slot="detail"
+                 @on-download="handleDownload"
                  :torrent-data="taskData.torrentData"
                  :default-checked-keys="taskData.download_files"
                  :disable-checkbox="true"></file-tree>
@@ -41,6 +42,7 @@
 <script>
 import byteSize from 'byte-size'
 import FileTree from "./FileTree";
+import {baseURL} from "../http/api";
 
 export default {
   name: "TaskDetail",
@@ -79,6 +81,9 @@ export default {
     onClose() {
       this.$emit('on-close')
     },
+    handleDownload(key) {
+      window.open(`${baseURL}/torrent/file/download?hash=${this.taskData.info_hash}&path=${key}`, '_blank')
+    },
     time(timestamp) {
       let date = new Date(timestamp)
       return `${date.getFullYear()}-${this.padStart(date.getMonth() + 1)}-${this.padStart(date.getDate())}
@@ -94,5 +99,6 @@ export default {
 <style scoped lang="less">
 /deep/ .ant-tree li .ant-tree-node-content-wrapper:hover {
   background-color: transparent !important;
+  cursor: default;
 }
 </style>
