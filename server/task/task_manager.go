@@ -272,6 +272,7 @@ func (tm *Manager) Delete(infoHash string) error {
 		if !base.DeleteFile(task.GetTaskParam().DownloadPath, task.torrent.Name()) {
 			return fmt.Errorf("文件删除失败")
 		}
+		tm.taskMap.Delete(infoHash)
 		BroadcastTaskStatus(task, Delete, true)
 
 		return nil

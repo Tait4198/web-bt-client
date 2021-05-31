@@ -235,13 +235,13 @@ export default {
       this.taskDetail.taskData = taskData
       this.taskDetail.visible = true
 
-      if (!taskData.torrentData) {
-        this.taskDetail.loading = true
-        let that = this
-        this.getTorrent(taskData, function () {
-          that.taskDetail.loading = false
-        })
-      }
+      // if (!taskData.torrentData) {
+      this.taskDetail.loading = true
+      let that = this
+      this.getTorrent(taskData, function () {
+        that.taskDetail.loading = false
+      })
+      // }
     },
     handleCloseDetail() {
       this.taskDetail.visible = false

@@ -43,7 +43,11 @@ func torrentUpload(c *gin.Context) {
 	}
 }
 
+func torrentFileDownload(c *gin.Context) {
+}
+
 func InitTorrentRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.GET("/info", torrentInfo)
 	groupRouter.POST("/upload", torrentUpload)
+	groupRouter.GET("/file/download", torrentFileDownload)
 }

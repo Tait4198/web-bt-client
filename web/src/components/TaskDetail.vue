@@ -29,6 +29,7 @@
       </a-descriptions>
 
       <file-tree v-if="visible"
+                 item-slot="detail"
                  :torrent-data="taskData.torrentData"
                  :default-checked-keys="taskData.download_files"
                  :disable-checkbox="true"></file-tree>
@@ -78,9 +79,6 @@ export default {
     onClose() {
       this.$emit('on-close')
     },
-    byteSize(val) {
-      return byteSize(val || 0)
-    },
     time(timestamp) {
       let date = new Date(timestamp)
       return `${date.getFullYear()}-${this.padStart(date.getMonth() + 1)}-${this.padStart(date.getDate())}
@@ -93,6 +91,8 @@ export default {
 }
 </script>
 
-<style scoped>
-
+<style scoped lang="less">
+/deep/ .ant-tree li .ant-tree-node-content-wrapper:hover {
+  background-color: transparent !important;
+}
 </style>

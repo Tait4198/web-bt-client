@@ -1,11 +1,18 @@
 <template>
   <a-tree :tree-data="treeData"
+          :selectable="false"
           :default-checked-keys="defaultCheckedKeys"
           checkable @check="onCheck">
     <template slot="custom" slot-scope="item">
       <div>
         <span>{{ item.title }}</span>
         <span style="margin-left: 24px">{{ fileSize(item.length) }}</span>
+      </div>
+    </template>
+    <template slot="detail" slot-scope="item">
+      <div>
+        <span>{{ item.title }}</span>
+        <a-button type="link" style="margin-left: 20px"> Link</a-button>
       </div>
     </template>
   </a-tree>
@@ -32,6 +39,10 @@ export default {
     disableCheckbox: {
       type: Boolean,
       default: false
+    },
+    itemSlot: {
+      type: String,
+      default: 'custom'
     }
   },
   computed: {
@@ -50,7 +61,7 @@ export default {
           length: this.torrentData.length,
           disableCheckbox: this.disableCheckbox,
           scopedSlots: {
-            title: 'custom'
+            title: this.itemSlot
           }
         }]
       } else {
@@ -98,7 +109,7 @@ export default {
           length: value.length,
           disableCheckbox: this.disableCheckbox,
           scopedSlots: {
-            title: 'custom'
+            title: this.itemSlot
           }
         }
         if (value.map) {
