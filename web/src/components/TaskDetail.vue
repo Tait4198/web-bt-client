@@ -20,16 +20,19 @@
       </a-descriptions-item>
     </a-descriptions>
 
-    <div v-if="taskData.torrentData">
-      <a-descriptions title="Torrent" layout="vertical" :column="{ md: 2, sm: 1, xs: 1 }">
-        <a-descriptions-item label="文件数量">
-          {{ taskData.torrentData.files.length }}
-        </a-descriptions-item>
-        <a-descriptions-item label="Pieces">
-          {{ pieces }}
-        </a-descriptions-item>
-      </a-descriptions>
-      <div style="overflow:auto">
+    <div>
+      <div style="text-align: center">
+        <a-spin :spinning="!taskData.torrentData"/>
+      </div>
+      <div v-if="taskData.torrentData">
+        <a-descriptions title="Torrent" layout="vertical" :column="{ md: 2, sm: 1, xs: 1 }">
+          <a-descriptions-item label="文件数量">
+            {{ taskData.torrentData.files.length }}
+          </a-descriptions-item>
+          <a-descriptions-item label="Pieces">
+            {{ pieces }}
+          </a-descriptions-item>
+        </a-descriptions>
         <file-tree v-if="visible"
                    item-slot="detail"
                    @on-download="handleDownload"

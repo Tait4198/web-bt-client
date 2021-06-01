@@ -367,11 +367,17 @@ var taskManager *Manager
 var tmOnce sync.Once
 
 func GetTaskManager() *Manager {
+	if taskManager == nil {
+		InitTaskManager(5)
+	}
+	return taskManager
+}
+
+func InitTaskManager(execSize int) {
 	tmOnce.Do(func() {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
 		//cfg.Logger = logger.Discard
-		cfg.ListenPort = 42068
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)
@@ -379,14 +385,14 @@ func GetTaskManager() *Manager {
 		taskManager = &Manager{
 			client:    client,
 			taskMap:   NewTaskMap(),
-			execQueue: NewExecQueue(1),
+			execQueue: NewExecQueue(execSize),
 		}
+
+		initTask()
 	})
-	return taskManager
 }
 
-func InitTaskManager() {
-	tm := GetTaskManager()
+func initTask() {
 	if dbTasks, err := db.SelectActiveTaskList(); err == nil {
 		var infoHashList []string
 		for _, dbTask := range dbTasks {
@@ -400,8 +406,8 @@ func InitTaskManager() {
 			}
 			for _, dbTask := range dbTasks {
 				mi := miMap[dbTask.InfoHash]
-				if task, err := tm.recoveryTask(&dbTask, mi); err == nil {
-					if err := tm.addToQueue(task, false); err == nil {
+				if task, err := taskManager.recoveryTask(&dbTask, mi); err == nil {
+					if err := taskManager.addToQueue(task, false); err == nil {
 						log.Printf("任务 %s 恢复成功 \n", dbTask.InfoHash)
 					} else {
 						log.Println(err)
