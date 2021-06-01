@@ -192,9 +192,12 @@ export default {
         this.read.last = val
         this.read.speed = byteSize(0)
       } else {
-        let sec = (this.taskData.stats.length - this.taskData.stats.bytes_completed) / (val - this.read.last)
-        this.remainingTime = sec ? this.calcTime(Math.ceil(sec)) : ''
-
+        if (this.taskData.stats) {
+          let sec = (this.taskData.stats.length - this.taskData.stats.bytes_completed) / (val - this.read.last)
+          this.remainingTime = sec ? this.calcTime(Math.ceil(sec)) : ''
+        } else {
+          this.remainingTime = ''
+        }
         this.read.speed = byteSize(val - this.read.last)
         this.read.last = val
       }
