@@ -1,5 +1,7 @@
 <template>
-  <a-drawer width="760" placement="right" :closable="false" :visible="visible" @close="onClose">
+  <a-drawer :title="taskData.torrent_name" :width="drawerWidth"
+            placement="right" :closable="true" :visible="visible"
+            @close="onClose">
     <a-descriptions title="任务信息" layout="vertical" :column="{ md: 1, sm: 1, xs: 1 }">
       <a-descriptions-item label="任务名称">
         {{ taskData.torrent_name }}
@@ -27,13 +29,14 @@
           {{ pieces }}
         </a-descriptions-item>
       </a-descriptions>
-
-      <file-tree v-if="visible"
-                 item-slot="detail"
-                 @on-download="handleDownload"
-                 :torrent-data="taskData.torrentData"
-                 :default-checked-keys="taskData.download_files"
-                 :disable-checkbox="true"></file-tree>
+      <div style="overflow:auto">
+        <file-tree v-if="visible"
+                   item-slot="detail"
+                   @on-download="handleDownload"
+                   :torrent-data="taskData.torrentData"
+                   :default-checked-keys="taskData.download_files"
+                   :disable-checkbox="true"></file-tree>
+      </div>
     </div>
 
   </a-drawer>
@@ -75,6 +78,13 @@ export default {
       } else {
         return `${this.taskData.torrentData.completed_pieces} / ${this.taskData.torrentData.pieces}`
       }
+    },
+    drawerWidth() {
+      let w = window.innerWidth;
+      if (w < 680) {
+        return w
+      }
+      return 680
     }
   },
   methods: {

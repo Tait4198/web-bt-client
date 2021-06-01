@@ -19,7 +19,7 @@
             下载
           </a-button>
           <span v-else-if="item.stats.percent > 0">
-          {{ `${(item.stats.percent / 100).toFixed(2)}%` }}
+          {{ `${(item.stats.percent * 100).toFixed(2)}%` }}
           </span>
           <span v-else>
             0%

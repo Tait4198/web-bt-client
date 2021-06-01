@@ -79,7 +79,6 @@ func (dt *TorrentTask) taskDownload() {
 	}()
 
 	go func() {
-		start := time.Now()
 		wsm := ws.GetWebSocketManager()
 	download:
 		for {
@@ -111,18 +110,6 @@ func (dt *TorrentTask) taskDownload() {
 							log.Printf("任务 %s CompleteFileLength 更新失败 %s", t.InfoHash().String(), err)
 						}
 					}
-
-					line := fmt.Sprintf(
-						"\n%v: downloading %q: %d/%d, %d/%d pieces completed (%d partial)",
-						time.Since(start),
-						t.Name(),
-						uint64(t.BytesCompleted()),
-						uint64(t.Length()),
-						completedPieces,
-						t.NumPieces(),
-						partialPieces,
-					)
-					fmt.Println(line)
 
 					wsm.Broadcast(dt.GetTorrentStats(false, true, true))
 				} else {
