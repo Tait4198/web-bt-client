@@ -4,10 +4,16 @@
             @close="onClose">
     <a-descriptions title="任务信息" layout="vertical" :column="{ md: 1, sm: 1, xs: 1 }">
       <a-descriptions-item label="任务名称">
+
         {{ taskData.torrent_name }}
       </a-descriptions-item>
       <a-descriptions-item label="Hash">
-        {{ taskData.info_hash }}
+        <a-space>
+          <span> {{ taskData.info_hash }} </span>
+          <a-button type="link" class="download-link" @click="handleDownloadTorrent(taskData.info_hash)">
+            <a-icon type="arrow-down" /> 种子下载
+          </a-button>
+        </a-space>
       </a-descriptions-item>
       <a-descriptions-item label="已下载">
         {{ fileSize }}
@@ -25,7 +31,7 @@
         <a-spin :spinning="!taskData.torrentData"/>
       </div>
       <div v-if="taskData.torrentData">
-        <a-descriptions title="Torrent" layout="vertical" :column="{ md: 2, sm: 1, xs: 1 }">
+        <a-descriptions title="Torrent" layout="vertical" :column="{ md: 3, sm: 1, xs: 1 }">
           <a-descriptions-item label="文件数量">
             {{ taskData.torrentData.files.length }}
           </a-descriptions-item>
@@ -33,9 +39,11 @@
             {{ pieces }}
           </a-descriptions-item>
         </a-descriptions>
+
         <file-tree v-if="visible"
                    item-slot="detail"
                    @on-download="handleDownload"
+                   @on-item-click="handleItemClick"
                    :torrent-data="taskData.torrentData"
                    :default-checked-keys="taskData.download_files"
                    :disable-checkbox="true"></file-tree>
@@ -95,7 +103,40 @@ export default {
       this.$emit('on-close')
     },
     handleDownload(key) {
-      window.open(`${baseURL}/torrent/file/download?hash=${this.taskData.info_hash}&path=${key}`, '_blank')
+      window.open(this.downloadUrl(key), '_blank')
+    },
+    handleItemClick(key) {
+      let textArea = document.createElement("textarea")
+      textArea.style.position = 'fixed'
+      textArea.style.top = '0'
+      textArea.style.left = '0'
+      textArea.style.width = '2em'
+      textArea.style.height = '2em'
+      textArea.style.padding = '0'
+      textArea.style.border = 'none'
+      textArea.style.outline = 'none'
+      textArea.style.boxShadow = 'none'
+      textArea.style.background = 'transparent'
+      textArea.value = this.downloadUrl(key)
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      let successful = false
+      try {
+        successful = document.execCommand('copy')
+      } catch (err) {
+        console.log(err)
+      }
+      document.body.removeChild(textArea)
+      if (successful) {
+        this.$message.success(`下载链接复制成功`)
+      } else {
+        this.$message.error(`下载链接复制失败`)
+      }
+    },
+    handleDownloadTorrent(hash) {
+      window.open(`${baseURL}/torrent/download/${hash}`, '_blank')
     },
     time(timestamp) {
       let date = new Date(timestamp)
@@ -104,6 +145,9 @@ export default {
     },
     padStart(val) {
       return val.toString().padStart(2, '0')
+    },
+    downloadUrl(key) {
+      return `${baseURL}/torrent/file/download?hash=${this.taskData.info_hash}&path=${key}`
     }
   }
 }
@@ -113,5 +157,9 @@ export default {
 /deep/ .ant-tree li .ant-tree-node-content-wrapper:hover {
   background-color: transparent !important;
   cursor: default;
+}
+
+.download-link {
+  padding: 0 !important;
 }
 </style>

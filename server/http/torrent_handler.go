@@ -2,9 +2,11 @@ package http
 
 import (
 	"fmt"
+	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/gin-gonic/gin"
 	"github.com/web-bt-client/base"
+	"github.com/web-bt-client/db"
 	"github.com/web-bt-client/task"
 	"net/http"
 	"strings"
@@ -49,7 +51,7 @@ func torrentFileDownload(c *gin.Context) {
 	path := c.DefaultQuery("path", "")
 	t, err := task.GetTaskManager().GetTask(hash)
 	if err != nil {
-		c.JSON(http.StatusOK, DataJson(true, err.Error()))
+		c.JSON(http.StatusOK, DataJson(false, err.Error()))
 		return
 	}
 	downloadPath := fmt.Sprintf("%s/%s", t.GetTaskParam().DownloadPath, t.GetTorrentName())
@@ -66,7 +68,21 @@ func torrentFileDownload(c *gin.Context) {
 			c.File(fullPath)
 		}
 	} else {
-		c.JSON(http.StatusNotFound, DataJson(true, "NotFound"))
+		c.JSON(http.StatusNotFound, DataJson(false, "NotFound"))
+	}
+}
+
+func torrentDownload(c *gin.Context) {
+	hash := c.Param("hash")
+	mi, err := db.SelectMetaInfo(hash)
+	if err != nil {
+		c.JSON(http.StatusOK, DataJson(false, err.Error()))
+		return
+	}
+	if b, err := bencode.Marshal(mi); err == nil {
+		c.Data(http.StatusOK, "application/x-bittorrent", b)
+	} else {
+		c.JSON(http.StatusOK, DataJson(false, err.Error()))
 	}
 }
 
@@ -74,4 +90,5 @@ func InitTorrentRouter(groupRouter *gin.RouterGroup) {
 	groupRouter.GET("/info", torrentInfo)
 	groupRouter.POST("/upload", torrentUpload)
 	groupRouter.GET("/file/download", torrentFileDownload)
+	groupRouter.GET("/download/:hash", torrentDownload)
 }

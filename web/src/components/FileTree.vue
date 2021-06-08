@@ -1,6 +1,7 @@
 <template>
   <a-tree :tree-data="treeData"
           :selectable="false"
+          :default-expanded-keys="[this.torrentData.name]"
           :default-checked-keys="defaultCheckedKeys"
           checkable @check="onCheck">
     <template slot="custom" slot-scope="item">
@@ -11,7 +12,12 @@
     </template>
     <template slot="detail" slot-scope="item">
       <a-space>
-        <p class="file-name">{{ item.title }}</p>
+        <p class="file-name" v-if="!item.stats || item.stats.completed_pieces !== item.stats.pieces">
+          {{ item.title }}
+        </p>
+        <a-button v-else type="link" class="download-link" @click="onItemClick(item.key)">
+          {{ item.title }}
+        </a-button>
         <span>{{ byteSize(item.length) }}</span>
         <span v-if="item.stats">
           <a-button type="link" v-if="item.stats.completed_pieces === item.stats.pieces"
@@ -88,6 +94,9 @@ export default {
     },
     onDownload(key) {
       this.$emit('on-download', key)
+    },
+    onItemClick(key) {
+      this.$emit('on-item-click', key)
     },
     byteSize(length) {
       return byteSize(length)
