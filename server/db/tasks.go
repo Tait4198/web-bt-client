@@ -138,6 +138,9 @@ func UpdateTaskComplete(complete bool, infoHash string) error {
 }
 
 func UpdateTaskDownloadFiles(files []string, infoHash string) error {
+	if files == nil {
+		files = make([]string, 0)
+	}
 	downloadFiles, err := json.Marshal(files)
 	if err != nil {
 		return fmt.Errorf("UpdateTaskDownloadFiles Marshal 失败 %w", err)

@@ -198,7 +198,7 @@ export default {
         } else {
           this.remainingTime = ''
         }
-        this.read.speed = byteSize(val - this.read.last)
+        this.read.speed = byteSize((val - this.read.last) || 0)
         this.read.last = val
       }
     },
@@ -207,7 +207,7 @@ export default {
         this.write.last = val
         this.write.speed = byteSize(0)
       } else {
-        this.write.speed = byteSize(val - this.write.last)
+        this.write.speed = byteSize((val - this.write.last) || 0)
         this.write.last = val
       }
     }

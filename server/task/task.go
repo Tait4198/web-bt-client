@@ -67,7 +67,7 @@ func (dt *TorrentTask) taskDownload() {
 				f.Download()
 				dt.download.downloadLength += f.Length()
 			} else {
-				if _, ok := fMap[f.DisplayPath()]; ok && f.BytesCompleted() != f.Length() {
+				if _, ok := fMap[f.DisplayPath()]; ok {
 					f.Download()
 					dt.download.downloadLength += f.Length()
 				} else {
@@ -146,12 +146,21 @@ func (dt *TorrentTask) taskGetInfo() error {
 		if t.Info() != nil {
 			fileLen := t.Length()
 			if fileLen == 0 {
-				for _, f := range t.Info().Files {
-					fileLen += f.Length
+				for _, f := range t.Files() {
+					fileLen += f.Length()
 				}
 			}
 			if err := db.UpdateTaskMetaInfo(t.InfoHash().String(), t.Info().Name, fileLen); err != nil {
 				log.Printf("任务 %s 更新 MetaInfo 失败 \n", t.InfoHash().String())
+			}
+			if dt.param.DownloadAll {
+				var downloadFiles []string
+				for _, f := range t.Files() {
+					downloadFiles = append(downloadFiles, f.DisplayPath())
+				}
+				if err := db.UpdateTaskDownloadFiles(downloadFiles, t.InfoHash().String()); err != nil {
+					log.Printf("任务 %s 更新 DownloadFiles 失败 \n", t.InfoHash().String())
+				}
 			}
 		}
 		dt.info.run = false
