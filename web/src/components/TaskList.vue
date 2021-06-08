@@ -225,7 +225,7 @@ export default {
         hash: infoHash
       }).then(res => {
         if (res.status) {
-          this.$message.success(`任务 ${this.tasks[infoHash] && this.tasks[infoHash].torrent_name}删除成功`)
+          this.$message.success(`任务${(this.tasks[infoHash] && this.tasks[infoHash].torrent_name) || ''}删除成功`)
         } else {
           this.$message.error(res.message)
         }
