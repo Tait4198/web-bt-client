@@ -161,6 +161,8 @@ func (dt *TorrentTask) taskGetInfo() error {
 				if err := db.UpdateTaskDownloadFiles(downloadFiles, t.InfoHash().String()); err != nil {
 					log.Printf("任务 %s 更新 DownloadFiles 失败 \n", t.InfoHash().String())
 				}
+				// 更新param下载文件信息
+				dt.param.DownloadFiles = downloadFiles
 			}
 		}
 		dt.info.run = false
