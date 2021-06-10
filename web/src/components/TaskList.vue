@@ -30,6 +30,7 @@
 
     <task-detail :visible="taskDetail.visible"
                  :task-data="taskDetail.taskData"
+                 :task-data-loading="taskDetail.loading"
                  @on-close="handleCloseDetail"></task-detail>
   </div>
 </template>

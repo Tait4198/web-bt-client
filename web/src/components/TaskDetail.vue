@@ -4,14 +4,15 @@
             @close="onClose">
     <a-descriptions title="任务信息" layout="vertical" :column="{ md: 1, sm: 1, xs: 1 }">
       <a-descriptions-item label="任务名称">
-
         {{ taskData.torrent_name }}
       </a-descriptions-item>
       <a-descriptions-item label="Hash">
         <a-space>
           <span> {{ taskData.info_hash }} </span>
-          <a-button type="link" class="download-link" @click="handleDownloadTorrent(taskData.info_hash)">
-            <a-icon type="arrow-down" /> 种子下载
+          <a-button v-if="taskData.meta_info" type="link" class="download-link"
+                    @click="handleDownloadTorrent(taskData.info_hash)">
+            <a-icon type="arrow-down"/>
+            种子下载
           </a-button>
         </a-space>
       </a-descriptions-item>
@@ -28,9 +29,9 @@
 
     <div>
       <div style="text-align: center">
-        <a-spin :spinning="!taskData.torrentData"/>
+        <a-spin :spinning="taskDataLoading"/>
       </div>
-      <div v-if="taskData.torrentData">
+      <div v-if="!taskDataLoading && taskData.torrentData">
         <a-descriptions title="Torrent" layout="vertical" :column="{ md: 3, sm: 1, xs: 1 }">
           <a-descriptions-item label="文件数量">
             {{ taskData.torrentData.files.length }}
@@ -70,6 +71,10 @@ export default {
       default: () => {
         return {}
       }
+    },
+    taskDataLoading: {
+      type: Boolean,
+      default: true
     }
   },
   components: {
@@ -117,7 +122,11 @@ export default {
       textArea.style.outline = 'none'
       textArea.style.boxShadow = 'none'
       textArea.style.background = 'transparent'
-      textArea.value = this.downloadUrl(key)
+      if (baseURL) {
+        textArea.value = this.downloadUrl(key)
+      } else {
+        textArea.value = "http://" + location.host + this.downloadUrl(key)
+      }
       document.body.appendChild(textArea)
       textArea.focus()
       textArea.select()

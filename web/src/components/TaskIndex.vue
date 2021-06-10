@@ -5,9 +5,14 @@
         <h3>WEB-BT-CLIENT</h3>
       </div>
       <div style="display: inline-block;float: right">
-        <a-button icon="plus" type="primary" @click="handleShowTaskModal">
-          添加任务
-        </a-button>
+        <a-space size="large">
+            <span>
+            <a-badge :status="wsStatus"/> {{wsConnStatus ? '服务连接' : '服务断开'}}
+          </span>
+          <a-button icon="plus" type="primary" @click="handleShowTaskModal">
+            添加任务
+          </a-button>
+        </a-space>
       </div>
     </div>
     <div style="height: 72px"></div>
@@ -19,6 +24,7 @@
 <script>
 import TaskList from "./TaskList";
 import TaskModal from "./TaskModal";
+import {mapGetters} from 'vuex';
 
 export default {
   name: "TaskIndex",
@@ -31,6 +37,12 @@ export default {
   methods: {
     handleShowTaskModal() {
       this.$refs.taskModal.show()
+    }
+  },
+  computed: {
+    ...mapGetters({wsConnStatus: 'getWsConnStatus'}),
+    wsStatus() {
+      return this.wsConnStatus ? 'success' : 'error'
     }
   },
   data() {

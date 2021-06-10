@@ -1,11 +1,19 @@
-// let socket = new WebSocket(`ws://${location.host}/ws/conn`);
-let socket = new WebSocket(`ws://127.0.0.1:8080/ws/conn`);
-
-export default function (bus) {
-    socket.onopen = () =>{
+function getSocketUrl() {
+    if (process.env.VUE_APP_WS_URL) {
+        return `${process.env.VUE_APP_WS_URL}/ws/conn`
+    } else {
+        return `ws://${location.host}/ws/conn`
     }
-    socket.onclose = () =>{
-        alert('Websocket Close')
+}
+
+let socket = new WebSocket(getSocketUrl());
+
+export default function (bus, store) {
+    socket.onopen = () => {
+        store.commit('wsConnStatus', true)
+    }
+    socket.onclose = () => {
+        store.commit('wsConnStatus', false)
     }
     socket.onmessage = function (message) {
         bus.emit('ws-message', message)

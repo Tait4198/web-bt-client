@@ -1,7 +1,6 @@
 import {GET, POST} from './http'
 
-export const baseURL = `http://127.0.0.1:8080`
-// export const baseURL = ``
+export const baseURL = process.env.VUE_APP_API_URL
 
 export const getTaskList = (params) => GET('/task/list', params, {
     baseURL

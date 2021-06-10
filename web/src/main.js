@@ -30,6 +30,7 @@ import {
 import App from './App.vue';
 import VueBus from 'vue-bus';
 import ws from "./ws/websocket";
+import store from "./store"
 
 Vue.component(Button.name, Button)
 Vue.component(Col.name, Col)
@@ -72,10 +73,11 @@ Vue.prototype.$notification = notification;
 Vue.use(Modal);
 Vue.use(VueBus);
 let app = new Vue({
+    store,
     render: h => h(App),
 })
 
-ws(app.$bus)
+ws(app.$bus, store)
 
 app.$mount('#app')
 
