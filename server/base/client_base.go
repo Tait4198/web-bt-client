@@ -5,6 +5,8 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"io/ioutil"
+	"log"
+	"net"
 	"strings"
 )
 
@@ -65,5 +67,21 @@ func GetSpace(path string) (uint64, error) {
 		return us.Free, nil
 	} else {
 		return 0, err
+	}
+}
+
+func PrintViewUrl(port int) {
+	if addr, err := net.InterfaceAddrs(); err == nil {
+		log.Println("可通过以下地址访问")
+		log.Printf("http://127.0.0.1:%d/web\n", port)
+		for _, a := range addr {
+			if ipNet, ok := a.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				if ipNet.IP.To4() != nil {
+					log.Printf("http://%s:%d/web\n", ipNet.IP.String(), port)
+				}
+			}
+		}
+	} else {
+		log.Println(err)
 	}
 }

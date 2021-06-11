@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/web-bt-client/base"
 	"github.com/web-bt-client/db"
 	btHttp "github.com/web-bt-client/http"
 	"github.com/web-bt-client/task"
+	"log"
 	"net/http"
 )
 
@@ -18,5 +20,13 @@ func main() {
 
 	db.InitDb()
 	task.InitTaskManager(size)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), btHttp.Router())
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf(":%d", port), btHttp.Router())
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}()
+	base.PrintViewUrl(port)
+	forever := make(chan bool)
+	<-forever
 }

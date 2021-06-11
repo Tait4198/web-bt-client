@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/web-bt-client/base"
 	"net/http"
 )
 
@@ -21,8 +22,14 @@ func DataJson(status bool, data interface{}) gin.H {
 }
 
 func Router() http.Handler {
+	if base.Release {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.New()
-	router.Use(cors.Default())
+	if !base.Release {
+		router.Use(cors.Default())
+	}
+
 	router.MaxMultipartMemory = 8 << 20
 
 	taskRouter := router.Group("task")

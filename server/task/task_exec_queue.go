@@ -38,6 +38,7 @@ func (q *ExecQueue) run() {
 			task := e.Value.(*TorrentTask)
 			BroadcastTaskStatus(task, QueueStatus, false)
 			go func() {
+				BroadcastTaskStatus(task, Pause, false)
 				defer func() {
 					<-q.execCh
 				}()

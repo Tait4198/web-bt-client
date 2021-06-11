@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	logger "github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
@@ -377,7 +378,9 @@ func InitTaskManager(execSize int) {
 	tmOnce.Do(func() {
 		cfg := torrent.NewDefaultClientConfig()
 		cfg.Seed = true
-		//cfg.Logger = logger.Discard
+		if base.Release {
+			cfg.Logger = logger.Discard
+		}
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			log.Fatalln(err)

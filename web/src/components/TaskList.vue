@@ -126,7 +126,11 @@ export default {
       })
     },
     wsTaskPause(taskData, obj) {
-      taskData.pause = obj.status
+      if (obj.status) {
+        this.taskStop(taskData)
+      } else {
+        this.taskStart(taskData)
+      }
     },
     wsTaskComplete(taskData, obj) {
       taskData.complete = obj.status
@@ -150,9 +154,7 @@ export default {
         download: true,
         update: true
       }).then(res => {
-        if (res.status) {
-          this.taskStart(this.tasks[infoHash])
-        } else {
+        if (!res.status) {
           this.$message.error(res.message)
         }
       })
@@ -161,14 +163,7 @@ export default {
       taskStop({
         hash: infoHash
       }).then(res => {
-        if (res.status) {
-          this.tasks[infoHash].pause = true
-          this.tasks[infoHash].wait = true
-          setTimeout(() => {
-            this.tasks[infoHash].wait = false
-          }, 3000)
-          this.$message.success(`任务 ${this.tasks[infoHash].torrent_name} 暂停成功`)
-        } else {
+        if (!res.status) {
           this.$message.error(res.message)
         }
       })
@@ -210,7 +205,7 @@ export default {
           if (this.partDownload.checkedFilesUpdate) {
             taskData.download_files = this.partDownload.tempCheckedKeys
           }
-          this.taskStart(taskData)
+          // this.taskStart(taskData)
         }
       }).finally(() => {
         this.partDownload.okLoading = false
@@ -266,6 +261,14 @@ export default {
         taskData.wait = false
       }, 3000)
       this.$message.success(`任务 ${taskData.torrent_name} 启动成功`)
+    },
+    taskStop(taskData) {
+      taskData.pause = true
+      taskData.wait = true
+      setTimeout(() => {
+        taskData.wait = false
+      }, 3000)
+      this.$message.success(`任务 ${taskData.torrent_name} 暂停成功`)
     },
     newTask(item) {
       if (!item.wait) {

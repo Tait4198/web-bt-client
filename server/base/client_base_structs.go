@@ -1,5 +1,7 @@
 package base
 
+const Release = false
+
 type FilePath struct {
 	Title  string `json:"title"`
 	Parent string `json:"parent"`
