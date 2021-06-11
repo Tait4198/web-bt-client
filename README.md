@@ -1,8 +1,10 @@
 ## Web-Bt-Client
 
-### 说明
+基于 [torrent](https://github.com/anacrolix/torrent) 库编写的 Torrent 客户端,提供Web页面进行交互,适合部署于云端服务器进行远程下载完成后直连下载回本地。
 
-一个 *BT客户端* 适合部署在云服务器高速下载资源，当资源在云端下载完成后使用附带功能直连下载回本地。
+### 使用
+
+下载 [Release](https://github.com/Tait4198/web-bt-client/releases/tag/1.0) 解压后目录下有 Windows/Linux/MacOS 的可执行文件，根据使用的系统启动程序后按输出提示访问Web界面进行使用。
 
 
 ### 截图
