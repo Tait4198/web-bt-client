@@ -6,9 +6,9 @@
 
 下载 [Release](https://github.com/Tait4198/web-bt-client/releases/tag/1.0) 解压后目录下有 Windows/Linux/MacOS 的可执行文件，根据使用的系统启动程序后按输出提示访问Web界面进行使用。
 
-在 [Vultr](https://www.vultr.com/) (使用教程)[https://xhylgjp.com/archives/%E5%9C%A8vultr%E4%BD%BF%E7%94%A8web-bt-client]
+[在Vultr使用教程](https://xhylgjp.com/archives/%E5%9C%A8vultr%E4%BD%BF%E7%94%A8web-bt-client)
 
-### 截图
+### 截图Cancel changes
 
 ![01.png](https://github.com/Tait4198/web-bt-client/blob/main/screenshots/01.png?raw=true)
 
