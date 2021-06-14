@@ -254,7 +254,7 @@ export default {
       if (!value) {
         callback(new Error('请输入磁力链接'));
       }
-      let pattern = /magnet:\?xt=urn:btih:([a-zA-Z0-9]{40}).*/
+      let pattern = /magnet:\?xt=urn:btih:([a-zA-Z0-9]{32}|[a-zA-Z0-9]{40}).*/
       if (!value.match(pattern)) {
         callback(new Error('无效磁力链接'))
       } else {

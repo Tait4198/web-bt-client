@@ -17,7 +17,7 @@ func (tm *Manager) recoveryTorrent(dbTask *db.Task, mi *metainfo.MetaInfo) (*tor
 		} else {
 			return nil, err
 		}
-	} else if match, _ := regexp.MatchString("magnet:\\?xt=urn:btih:[a-zA-Z0-9]{40}.*", dbTask.CreateTorrentInfo); match {
+	} else if match, _ := regexp.MatchString("magnet:\\?xt=urn:btih:([a-zA-Z0-9]{40}|[a-zA-Z0-9]{32}).*", dbTask.CreateTorrentInfo); match {
 		// 磁力链接恢复
 		if mt, err := tm.newUriTorrentWithPath(dbTask.CreateTorrentInfo, dbTask.DownloadPath); err == nil {
 			t = mt
