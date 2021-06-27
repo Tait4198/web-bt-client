@@ -135,6 +135,12 @@ export default {
       }
     }
   },
+  mounted() {
+    window.addEventListener('keydown', this.handleKeydown)
+    this.$once('hook:beforeDestroy', () => {
+      window.removeEventListener('keydown', this.handleKeydown)
+    })
+  },
   computed: {
     freeSpace() {
       return byteSize(this.pathFreeSpace)
@@ -247,6 +253,13 @@ export default {
 
     validateSpaceData() {
       this.$refs.downloadPath.onFieldBlur()
+    },
+
+    handleKeydown(event) {
+      const {key} = event
+      if (key === 'Enter') {
+        this.handleTaskOk()
+      }
     }
   },
   data() {

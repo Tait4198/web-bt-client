@@ -156,7 +156,7 @@ export default {
       return val.toString().padStart(2, '0')
     },
     downloadUrl(key) {
-      return `${baseURL}/torrent/file/download?hash=${this.taskData.info_hash}&path=${key}`
+      return `${baseURL}/torrent/file/download?hash=${this.taskData.info_hash}&path=${encodeURIComponent(key)}`
     }
   }
 }
